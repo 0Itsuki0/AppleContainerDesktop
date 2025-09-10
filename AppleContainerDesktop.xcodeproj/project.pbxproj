@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		9860436F2E6D4A8700FA9B43 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 9860436E2E6D4A8700FA9B43 /* README.md */; };
-		986043712E6D4A9A00FA9B43 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 986043702E6D4A9A00FA9B43 /* .gitignore */; };
 		9863C5472E6F9F9900C4AE3C /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5462E6F9F9900C4AE3C /* ContainerBuild */; };
 		9863C5492E6F9F9900C4AE3C /* ContainerBuildCache in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5482E6F9F9900C4AE3C /* ContainerBuildCache */; };
 		9863C54B2E6F9F9900C4AE3C /* ContainerBuildExecutor in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C54A2E6F9F9900C4AE3C /* ContainerBuildExecutor */; };
@@ -48,7 +47,6 @@
 /* Begin PBXFileReference section */
 		9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppleContainerDesktop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9860436E2E6D4A8700FA9B43 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		986043702E6D4A9A00FA9B43 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -108,7 +106,6 @@
 			isa = PBXGroup;
 			children = (
 				9860436E2E6D4A8700FA9B43 /* README.md */,
-				986043702E6D4A9A00FA9B43 /* .gitignore */,
 				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
 				9829EC432E17BA3C00A9F8D3 /* Products */,
 			);
@@ -224,7 +221,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				9860436F2E6D4A8700FA9B43 /* README.md in Resources */,
-				986043712E6D4A9A00FA9B43 /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
