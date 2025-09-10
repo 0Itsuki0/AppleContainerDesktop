@@ -1,0 +1,617 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9860436F2E6D4A8700FA9B43 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 9860436E2E6D4A8700FA9B43 /* README.md */; };
+		986043712E6D4A9A00FA9B43 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 986043702E6D4A9A00FA9B43 /* .gitignore */; };
+		9863C5472E6F9F9900C4AE3C /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5462E6F9F9900C4AE3C /* ContainerBuild */; };
+		9863C5492E6F9F9900C4AE3C /* ContainerBuildCache in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5482E6F9F9900C4AE3C /* ContainerBuildCache */; };
+		9863C54B2E6F9F9900C4AE3C /* ContainerBuildExecutor in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C54A2E6F9F9900C4AE3C /* ContainerBuildExecutor */; };
+		9863C54D2E6F9F9900C4AE3C /* ContainerBuildIR in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C54C2E6F9F9900C4AE3C /* ContainerBuildIR */; };
+		9863C54F2E6F9F9900C4AE3C /* ContainerBuildParser in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C54E2E6F9F9900C4AE3C /* ContainerBuildParser */; };
+		9863C5512E6F9F9900C4AE3C /* ContainerBuildReporting in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5502E6F9F9900C4AE3C /* ContainerBuildReporting */; };
+		9863C5532E6F9F9900C4AE3C /* ContainerBuildSnapshotter in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5522E6F9F9900C4AE3C /* ContainerBuildSnapshotter */; };
+		9863C5552E6F9F9900C4AE3C /* ContainerClient in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5542E6F9F9900C4AE3C /* ContainerClient */; };
+		9863C5572E6F9F9900C4AE3C /* ContainerImagesService in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5562E6F9F9900C4AE3C /* ContainerImagesService */; };
+		9863C5592E6F9F9900C4AE3C /* ContainerLog in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5582E6F9F9900C4AE3C /* ContainerLog */; };
+		9863C55B2E6F9F9900C4AE3C /* ContainerNetworkService in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C55A2E6F9F9900C4AE3C /* ContainerNetworkService */; };
+		9863C55D2E6F9F9900C4AE3C /* ContainerPersistence in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C55C2E6F9F9900C4AE3C /* ContainerPersistence */; };
+		9863C55F2E6F9F9900C4AE3C /* ContainerPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C55E2E6F9F9900C4AE3C /* ContainerPlugin */; };
+		9863C5612E6F9F9900C4AE3C /* ContainerSandboxService in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5602E6F9F9900C4AE3C /* ContainerSandboxService */; };
+		9863C5632E6F9F9900C4AE3C /* ContainerVersion in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5622E6F9F9900C4AE3C /* ContainerVersion */; };
+		9863C5652E6F9F9900C4AE3C /* ContainerXPC in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5642E6F9F9900C4AE3C /* ContainerXPC */; };
+		9863C5672E6F9F9900C4AE3C /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5662E6F9F9900C4AE3C /* SocketForwarder */; };
+		98F2D4C92E6BF5A300633147 /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4C82E6BF5A300633147 /* ContainerBuild */; };
+		98F2D4CB2E6BF5A300633147 /* ContainerBuildCache in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4CA2E6BF5A300633147 /* ContainerBuildCache */; };
+		98F2D4CD2E6BF5A300633147 /* ContainerBuildExecutor in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4CC2E6BF5A300633147 /* ContainerBuildExecutor */; };
+		98F2D4CF2E6BF5A300633147 /* ContainerBuildIR in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4CE2E6BF5A300633147 /* ContainerBuildIR */; };
+		98F2D4D12E6BF5A300633147 /* ContainerBuildParser in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4D02E6BF5A300633147 /* ContainerBuildParser */; };
+		98F2D4D32E6BF5A300633147 /* ContainerBuildReporting in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4D22E6BF5A300633147 /* ContainerBuildReporting */; };
+		98F2D4D52E6BF5A300633147 /* ContainerBuildSnapshotter in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4D42E6BF5A300633147 /* ContainerBuildSnapshotter */; };
+		98F2D4D72E6BF5A300633147 /* ContainerClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4D62E6BF5A300633147 /* ContainerClient */; };
+		98F2D4D92E6BF5A300633147 /* ContainerImagesService in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4D82E6BF5A300633147 /* ContainerImagesService */; };
+		98F2D4DB2E6BF5A300633147 /* ContainerLog in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4DA2E6BF5A300633147 /* ContainerLog */; };
+		98F2D4DD2E6BF5A300633147 /* ContainerNetworkService in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4DC2E6BF5A300633147 /* ContainerNetworkService */; };
+		98F2D4DF2E6BF5A300633147 /* ContainerPersistence in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4DE2E6BF5A300633147 /* ContainerPersistence */; };
+		98F2D4E12E6BF5A300633147 /* ContainerPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E02E6BF5A300633147 /* ContainerPlugin */; };
+		98F2D4E32E6BF5A300633147 /* ContainerSandboxService in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E22E6BF5A300633147 /* ContainerSandboxService */; };
+		98F2D4E52E6BF5A300633147 /* ContainerVersion in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E42E6BF5A300633147 /* ContainerVersion */; };
+		98F2D4E72E6BF5A300633147 /* ContainerXPC in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E62E6BF5A300633147 /* ContainerXPC */; };
+		98F2D4E92E6BF5A300633147 /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E82E6BF5A300633147 /* SocketForwarder */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppleContainerDesktop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9860436E2E6D4A8700FA9B43 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		986043702E6D4A9A00FA9B43 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AppleContainerDesktop;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9829EC3F2E17BA3C00A9F8D3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9863C5672E6F9F9900C4AE3C /* SocketForwarder in Frameworks */,
+				98F2D4D12E6BF5A300633147 /* ContainerBuildParser in Frameworks */,
+				9863C5612E6F9F9900C4AE3C /* ContainerSandboxService in Frameworks */,
+				9863C5512E6F9F9900C4AE3C /* ContainerBuildReporting in Frameworks */,
+				9863C5472E6F9F9900C4AE3C /* ContainerBuild in Frameworks */,
+				98F2D4CF2E6BF5A300633147 /* ContainerBuildIR in Frameworks */,
+				98F2D4E92E6BF5A300633147 /* SocketForwarder in Frameworks */,
+				9863C55B2E6F9F9900C4AE3C /* ContainerNetworkService in Frameworks */,
+				9863C55D2E6F9F9900C4AE3C /* ContainerPersistence in Frameworks */,
+				9863C54B2E6F9F9900C4AE3C /* ContainerBuildExecutor in Frameworks */,
+				98F2D4CD2E6BF5A300633147 /* ContainerBuildExecutor in Frameworks */,
+				98F2D4D92E6BF5A300633147 /* ContainerImagesService in Frameworks */,
+				98F2D4CB2E6BF5A300633147 /* ContainerBuildCache in Frameworks */,
+				9863C5592E6F9F9900C4AE3C /* ContainerLog in Frameworks */,
+				98F2D4DB2E6BF5A300633147 /* ContainerLog in Frameworks */,
+				98F2D4D32E6BF5A300633147 /* ContainerBuildReporting in Frameworks */,
+				9863C54F2E6F9F9900C4AE3C /* ContainerBuildParser in Frameworks */,
+				9863C54D2E6F9F9900C4AE3C /* ContainerBuildIR in Frameworks */,
+				98F2D4C92E6BF5A300633147 /* ContainerBuild in Frameworks */,
+				98F2D4E72E6BF5A300633147 /* ContainerXPC in Frameworks */,
+				98F2D4E52E6BF5A300633147 /* ContainerVersion in Frameworks */,
+				98F2D4DF2E6BF5A300633147 /* ContainerPersistence in Frameworks */,
+				98F2D4DD2E6BF5A300633147 /* ContainerNetworkService in Frameworks */,
+				98F2D4E32E6BF5A300633147 /* ContainerSandboxService in Frameworks */,
+				9863C5652E6F9F9900C4AE3C /* ContainerXPC in Frameworks */,
+				98F2D4E12E6BF5A300633147 /* ContainerPlugin in Frameworks */,
+				9863C5572E6F9F9900C4AE3C /* ContainerImagesService in Frameworks */,
+				9863C5632E6F9F9900C4AE3C /* ContainerVersion in Frameworks */,
+				9863C5492E6F9F9900C4AE3C /* ContainerBuildCache in Frameworks */,
+				9863C55F2E6F9F9900C4AE3C /* ContainerPlugin in Frameworks */,
+				98F2D4D72E6BF5A300633147 /* ContainerClient in Frameworks */,
+				98F2D4D52E6BF5A300633147 /* ContainerBuildSnapshotter in Frameworks */,
+				9863C5532E6F9F9900C4AE3C /* ContainerBuildSnapshotter in Frameworks */,
+				9863C5552E6F9F9900C4AE3C /* ContainerClient in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9829EC392E17BA3C00A9F8D3 = {
+			isa = PBXGroup;
+			children = (
+				9860436E2E6D4A8700FA9B43 /* README.md */,
+				986043702E6D4A9A00FA9B43 /* .gitignore */,
+				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+				9829EC432E17BA3C00A9F8D3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9829EC432E17BA3C00A9F8D3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9829EC412E17BA3C00A9F8D3 /* AppleContainerDesktop */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9829EC4D2E17BA3D00A9F8D3 /* Build configuration list for PBXNativeTarget "AppleContainerDesktop" */;
+			buildPhases = (
+				9829EC3E2E17BA3C00A9F8D3 /* Sources */,
+				9829EC3F2E17BA3C00A9F8D3 /* Frameworks */,
+				9829EC402E17BA3C00A9F8D3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+			);
+			name = AppleContainerDesktop;
+			packageProductDependencies = (
+				98F2D4C82E6BF5A300633147 /* ContainerBuild */,
+				98F2D4CA2E6BF5A300633147 /* ContainerBuildCache */,
+				98F2D4CC2E6BF5A300633147 /* ContainerBuildExecutor */,
+				98F2D4CE2E6BF5A300633147 /* ContainerBuildIR */,
+				98F2D4D02E6BF5A300633147 /* ContainerBuildParser */,
+				98F2D4D22E6BF5A300633147 /* ContainerBuildReporting */,
+				98F2D4D42E6BF5A300633147 /* ContainerBuildSnapshotter */,
+				98F2D4D62E6BF5A300633147 /* ContainerClient */,
+				98F2D4D82E6BF5A300633147 /* ContainerImagesService */,
+				98F2D4DA2E6BF5A300633147 /* ContainerLog */,
+				98F2D4DC2E6BF5A300633147 /* ContainerNetworkService */,
+				98F2D4DE2E6BF5A300633147 /* ContainerPersistence */,
+				98F2D4E02E6BF5A300633147 /* ContainerPlugin */,
+				98F2D4E22E6BF5A300633147 /* ContainerSandboxService */,
+				98F2D4E42E6BF5A300633147 /* ContainerVersion */,
+				98F2D4E62E6BF5A300633147 /* ContainerXPC */,
+				98F2D4E82E6BF5A300633147 /* SocketForwarder */,
+				9863C5462E6F9F9900C4AE3C /* ContainerBuild */,
+				9863C5482E6F9F9900C4AE3C /* ContainerBuildCache */,
+				9863C54A2E6F9F9900C4AE3C /* ContainerBuildExecutor */,
+				9863C54C2E6F9F9900C4AE3C /* ContainerBuildIR */,
+				9863C54E2E6F9F9900C4AE3C /* ContainerBuildParser */,
+				9863C5502E6F9F9900C4AE3C /* ContainerBuildReporting */,
+				9863C5522E6F9F9900C4AE3C /* ContainerBuildSnapshotter */,
+				9863C5542E6F9F9900C4AE3C /* ContainerClient */,
+				9863C5562E6F9F9900C4AE3C /* ContainerImagesService */,
+				9863C5582E6F9F9900C4AE3C /* ContainerLog */,
+				9863C55A2E6F9F9900C4AE3C /* ContainerNetworkService */,
+				9863C55C2E6F9F9900C4AE3C /* ContainerPersistence */,
+				9863C55E2E6F9F9900C4AE3C /* ContainerPlugin */,
+				9863C5602E6F9F9900C4AE3C /* ContainerSandboxService */,
+				9863C5622E6F9F9900C4AE3C /* ContainerVersion */,
+				9863C5642E6F9F9900C4AE3C /* ContainerXPC */,
+				9863C5662E6F9F9900C4AE3C /* SocketForwarder */,
+			);
+			productName = AppleContainerDesktop;
+			productReference = 9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9829EC3A2E17BA3C00A9F8D3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					9829EC412E17BA3C00A9F8D3 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = 9829EC3D2E17BA3C00A9F8D3 /* Build configuration list for PBXProject "AppleContainerDesktop" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9829EC392E17BA3C00A9F8D3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9829EC432E17BA3C00A9F8D3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9829EC412E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9829EC402E17BA3C00A9F8D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9860436F2E6D4A8700FA9B43 /* README.md in Resources */,
+				986043712E6D4A9A00FA9B43 /* .gitignore in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9829EC3E2E17BA3C00A9F8D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		9829EC4B2E17BA3D00A9F8D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		9829EC4C2E17BA3D00A9F8D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		9829EC4E2E17BA3D00A9F8D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NLTYK5T6U3;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = itsuki.enjoy.AppleContainerDesktop;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		9829EC4F2E17BA3D00A9F8D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = NLTYK5T6U3;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = itsuki.enjoy.AppleContainerDesktop;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9829EC3D2E17BA3C00A9F8D3 /* Build configuration list for PBXProject "AppleContainerDesktop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9829EC4B2E17BA3D00A9F8D3 /* Debug */,
+				9829EC4C2E17BA3D00A9F8D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9829EC4D2E17BA3D00A9F8D3 /* Build configuration list for PBXNativeTarget "AppleContainerDesktop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9829EC4E2E17BA3D00A9F8D3 /* Debug */,
+				9829EC4F2E17BA3D00A9F8D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/container";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.4.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9863C5462E6F9F9900C4AE3C /* ContainerBuild */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerBuild;
+		};
+		9863C5482E6F9F9900C4AE3C /* ContainerBuildCache */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerBuildCache;
+		};
+		9863C54A2E6F9F9900C4AE3C /* ContainerBuildExecutor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerBuildExecutor;
+		};
+		9863C54C2E6F9F9900C4AE3C /* ContainerBuildIR */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerBuildIR;
+		};
+		9863C54E2E6F9F9900C4AE3C /* ContainerBuildParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerBuildParser;
+		};
+		9863C5502E6F9F9900C4AE3C /* ContainerBuildReporting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerBuildReporting;
+		};
+		9863C5522E6F9F9900C4AE3C /* ContainerBuildSnapshotter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerBuildSnapshotter;
+		};
+		9863C5542E6F9F9900C4AE3C /* ContainerClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerClient;
+		};
+		9863C5562E6F9F9900C4AE3C /* ContainerImagesService */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerImagesService;
+		};
+		9863C5582E6F9F9900C4AE3C /* ContainerLog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerLog;
+		};
+		9863C55A2E6F9F9900C4AE3C /* ContainerNetworkService */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerNetworkService;
+		};
+		9863C55C2E6F9F9900C4AE3C /* ContainerPersistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerPersistence;
+		};
+		9863C55E2E6F9F9900C4AE3C /* ContainerPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerPlugin;
+		};
+		9863C5602E6F9F9900C4AE3C /* ContainerSandboxService */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerSandboxService;
+		};
+		9863C5622E6F9F9900C4AE3C /* ContainerVersion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerVersion;
+		};
+		9863C5642E6F9F9900C4AE3C /* ContainerXPC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerXPC;
+		};
+		9863C5662E6F9F9900C4AE3C /* SocketForwarder */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = SocketForwarder;
+		};
+		98F2D4C82E6BF5A300633147 /* ContainerBuild */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerBuild;
+		};
+		98F2D4CA2E6BF5A300633147 /* ContainerBuildCache */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerBuildCache;
+		};
+		98F2D4CC2E6BF5A300633147 /* ContainerBuildExecutor */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerBuildExecutor;
+		};
+		98F2D4CE2E6BF5A300633147 /* ContainerBuildIR */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerBuildIR;
+		};
+		98F2D4D02E6BF5A300633147 /* ContainerBuildParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerBuildParser;
+		};
+		98F2D4D22E6BF5A300633147 /* ContainerBuildReporting */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerBuildReporting;
+		};
+		98F2D4D42E6BF5A300633147 /* ContainerBuildSnapshotter */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerBuildSnapshotter;
+		};
+		98F2D4D62E6BF5A300633147 /* ContainerClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerClient;
+		};
+		98F2D4D82E6BF5A300633147 /* ContainerImagesService */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerImagesService;
+		};
+		98F2D4DA2E6BF5A300633147 /* ContainerLog */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerLog;
+		};
+		98F2D4DC2E6BF5A300633147 /* ContainerNetworkService */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerNetworkService;
+		};
+		98F2D4DE2E6BF5A300633147 /* ContainerPersistence */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerPersistence;
+		};
+		98F2D4E02E6BF5A300633147 /* ContainerPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerPlugin;
+		};
+		98F2D4E22E6BF5A300633147 /* ContainerSandboxService */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerSandboxService;
+		};
+		98F2D4E42E6BF5A300633147 /* ContainerVersion */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerVersion;
+		};
+		98F2D4E62E6BF5A300633147 /* ContainerXPC */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContainerXPC;
+		};
+		98F2D4E82E6BF5A300633147 /* SocketForwarder */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SocketForwarder;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 9829EC3A2E17BA3C00A9F8D3 /* Project object */;
+}
