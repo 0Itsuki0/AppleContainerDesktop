@@ -92,16 +92,6 @@ struct ContentView: View {
                             }, label: {
                                 Label("Stop System", systemImage: "stop.fill")
                             })
-                            
-                            Button(action: {
-                                Task {
-                                    await self.stopSystem()
-                                    self.applicationManager.showError = false
-                                    NSApplication.shared.terminate(nil)
-                                }
-                            }, label: {
-                                Label("Terminate", systemImage: "power")
-                            })
                         }
                     }, label: {
                         Image(systemName: "ellipsis")
