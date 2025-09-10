@@ -132,7 +132,7 @@ struct CreateContainerView: View {
                         
                         HStack(alignment: .lastTextBaseline) {
                             Text("Publish Ports")
-                            Text("[Host-ip:Host-port]:[Container-port] or [Host-port]:[Container-port] or ")
+                            Text("[Host-port]:[Container-port]")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
 

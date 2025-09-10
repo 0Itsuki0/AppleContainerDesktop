@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		983B3D162E71389C005E1934 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 983B3D152E71389C005E1934 /* LICENSE */; };
+		983B3D172E71389C005E1934 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 983B3D142E71389C005E1934 /* .gitignore */; };
 		9860436F2E6D4A8700FA9B43 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 9860436E2E6D4A8700FA9B43 /* README.md */; };
 		9863C5472E6F9F9900C4AE3C /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5462E6F9F9900C4AE3C /* ContainerBuild */; };
 		9863C5492E6F9F9900C4AE3C /* ContainerBuildCache in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5482E6F9F9900C4AE3C /* ContainerBuildCache */; };
@@ -46,13 +48,39 @@
 
 /* Begin PBXFileReference section */
 		9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppleContainerDesktop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		983B3D142E71389C005E1934 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		983B3D152E71389C005E1934 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		9860436E2E6D4A8700FA9B43 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9863C6DF2E711F9D00C4AE3C /* Exceptions for "ReadmeAssets" folder in "AppleContainerDesktop" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				appMenu.png,
+				appSetting.png,
+				createContainer.gif,
+				executableNotFound.png,
+				inspectContainer.gif,
+				overview.gif,
+				pullImage.gif,
+			);
+			target = 9829EC412E17BA3C00A9F8D3 /* AppleContainerDesktop */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AppleContainerDesktop;
+			sourceTree = "<group>";
+		};
+		9863C6DD2E711F3900C4AE3C /* ReadmeAssets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9863C6DF2E711F9D00C4AE3C /* Exceptions for "ReadmeAssets" folder in "AppleContainerDesktop" target */,
+			);
+			path = ReadmeAssets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -105,6 +133,9 @@
 		9829EC392E17BA3C00A9F8D3 = {
 			isa = PBXGroup;
 			children = (
+				983B3D142E71389C005E1934 /* .gitignore */,
+				983B3D152E71389C005E1934 /* LICENSE */,
+				9863C6DD2E711F3900C4AE3C /* ReadmeAssets */,
 				9860436E2E6D4A8700FA9B43 /* README.md */,
 				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
 				9829EC432E17BA3C00A9F8D3 /* Products */,
@@ -136,6 +167,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+				9863C6DD2E711F3900C4AE3C /* ReadmeAssets */,
 			);
 			name = AppleContainerDesktop;
 			packageProductDependencies = (
@@ -220,6 +252,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				983B3D162E71389C005E1934 /* LICENSE in Resources */,
+				983B3D172E71389C005E1934 /* .gitignore in Resources */,
 				9860436F2E6D4A8700FA9B43 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -362,12 +396,20 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = NLTYK5T6U3;
 				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -380,6 +422,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = itsuki.enjoy.AppleContainerDesktop;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -393,12 +441,20 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = NLTYK5T6U3;
 				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -411,6 +467,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = itsuki.enjoy.AppleContainerDesktop;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;

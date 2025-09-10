@@ -173,6 +173,7 @@ struct SettingsView: View {
             })
         }, message: {
             Text(self.errorMessage ?? "Unknown Error")
+                .lineLimit(5)
         })
         .onChange(of: self.errorMessage, initial: true, {
             if errorMessage != nil {

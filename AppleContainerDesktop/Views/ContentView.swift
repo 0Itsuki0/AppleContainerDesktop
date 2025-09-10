@@ -127,8 +127,7 @@ struct ContentView: View {
             }, message: {
                 let message = String("\(self.applicationManager.error, default: "Unknown Error")")
                 Text(message)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .lineLimit(5)
             })
             .sheet(isPresented: $applicationManager.showProgressView, content: {
                 CustomProgressView()
