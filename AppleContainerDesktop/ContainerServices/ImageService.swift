@@ -315,8 +315,9 @@ struct BuildImageOutputConfiguration {
         return .init(type: type.rawValue, destination: destination, additionalFields: additionalFields.dictRepresentation, rawValue: rawInput)
     }
     
+    
+    // TODO: Add validation on URL
     func verify() throws {
-//        static func resolveDestination(dest: String) throws -> URL {
 //            let destination = URL(fileURLWithPath: dest)
 //            let fileManager = FileManager.default
 //
@@ -339,9 +340,6 @@ struct BuildImageOutputConfiguration {
 //                let parentDirectory = destination.deletingLastPathComponent()
 //                try? fileManager.createDirectory(at: parentDirectory, withIntermediateDirectories: true, attributes: nil)
 //            }
-//
-//            return destination
-//        }
 
     }
 
