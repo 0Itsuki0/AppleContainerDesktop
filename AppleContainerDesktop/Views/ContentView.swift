@@ -186,9 +186,9 @@ struct ContentView: View {
     }
 }
 
-//
-//#Preview {
-//    ContentView()
-//        .environment(ApplicationManager())
-//        .environment(UserSettingsManager())
-//}
+
+#Preview {
+    ContentView()
+        .environment(ApplicationManager())
+        .environment(UserSettingsManager())
+}

@@ -31,7 +31,7 @@ struct ImageDisplayModel: Identifiable {
     var image: ClientImage
     
     var id: String {
-        return indexDigest + manifestDigest
+        return indexDigest + manifestDigest + created
     }
     
     init?(_ image: ClientImage, containers: [ClientContainer]) async throws {

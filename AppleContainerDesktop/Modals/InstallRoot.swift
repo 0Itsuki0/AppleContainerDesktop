@@ -24,6 +24,6 @@ struct InstallRoot {
             .standardized
         
         self.url = Self.envPath.map { URL(fileURLWithPath: $0) } ?? defaultURL
-        self.path = url.path(percentEncoded: false)
+        self.path = url.absolutePath
     }
 }

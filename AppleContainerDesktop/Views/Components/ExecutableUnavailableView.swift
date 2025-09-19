@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ExecutableUnavailableView: View {
     @Environment(ApplicationManager.self) private var applicationManager
@@ -20,12 +21,13 @@ struct ExecutableUnavailableView: View {
 
 
     var body: some View {
+        
         VStack(spacing: 24) {
             Text("Executable Not found")
                 .font(.headline)
             
             VStack(alignment: .leading, spacing: 12) {
-                Text("`container` executable is not found at the following Path: \n`\(self.userSettingsManager.executablePathUrl.path(percentEncoded: false))`.")
+                Text("`container` executable is not found at the following Path: \n`\(self.userSettingsManager.executablePathUrl.absolutePath)`.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
                     .lineHeight(.loose)
@@ -102,9 +104,8 @@ struct ExecutableUnavailableView: View {
         .padding(.horizontal, 48)
         .padding(.vertical)
         .sheet(isPresented: $showExecutablePathEdit, content: {
-            PathEditView(title: "Set Executable Path", message: "Path to `container` executable. For example, `\(UserSettingsManager.defaultExecutablePathString)`", onConfirm: { url in
-                self.userSettingsManager.executablePathUrl = url
-            },  verifyExecutable: true, verifyFileURL: false, text: self.userSettingsManager.executablePathUrl.path(percentEncoded: false))
+            ExecutableEditView(errorMessage: $errorMessage)
+                .environment(self.userSettingsManager)
         })
         .onAppear {
             self.showProgressView = false
@@ -115,4 +116,48 @@ struct ExecutableUnavailableView: View {
         })
         .interactiveDismissDisabled()
     }
+}
+
+
+
+private struct ExecutableEditView: View {
+    @Environment(UserSettingsManager.self) private var userSettingsManager
+    @Environment(\.dismiss) private var dismiss
+    
+    @Binding var errorMessage: String?
+
+    var body: some View {
+        @Bindable var userSettingsManager = userSettingsManager
+
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading) {
+                Text("Set Executable Path")
+                    .font(.headline)
+
+                Text("Path to `container` executable. For example, `\(UserSettingsManager.defaultExecutablePathString)`")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            FileSelectView(fileURL: $userSettingsManager.executablePathUrl, errorMessage: $errorMessage, allowedContentTypes: [.executable])
+
+            HStack(spacing: 16) {
+                Button(action: {
+                    self.dismiss()
+                }, label: {
+                    Text("Done")
+                        .padding(.horizontal, 2)
+                })
+                .buttonStyle(CustomButtonStyle(backgroundShape: .roundedRectangle(4), backgroundColor: .blue))
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+
+        }
+        .padding(.all, 24)
+        .frame(width: 480)
+        .fixedSize(horizontal: false, vertical: true)
+        .interactiveDismissDisabled()
+
+    }
+
 }

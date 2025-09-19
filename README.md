@@ -29,11 +29,15 @@ After system started correctly, we can then interact with the images and contain
 
 ### Images
 - Pull Remote Image
+- Build Image from Dockerfile
 - Delete Image
 - Inspect some basic Image information such as container using the image, OS, Arch, and etc.
 
+#### Pull Remote
+![](./ReadmeAssets/Image/pullImage.gif)  
 
-![](./ReadmeAssets/pullImage.gif)  
+#### Build From Dockerfile
+![](./ReadmeAssets/Image/buildImage.png)  
 
 
 ### Containers
@@ -41,13 +45,13 @@ After system started correctly, we can then interact with the images and contain
     - From added image, or directly from remote references
     - Set custom name, add published ports and environment values
     
-![](./ReadmeAssets/createContainer.gif)  
+![](./ReadmeAssets/Container/createContainer.gif)  
 
 - Start, stop, or delete containers
 - Inspect container
     - Status, OS, Arch, published ports, environment variables, and logs.
 
-![](./ReadmeAssets/inspectContainer.gif)  
+![](./ReadmeAssets/Container/inspectContainer.gif)  
 
 
 ### Others
@@ -70,8 +74,7 @@ Interact with the container system through the menu if needed.
 
 ### Images
 - Inspect Image with detail
-- Build image
--  When pulling image from remote, being able to set configurations such as OS, Arch, and etc.
+- Add additional configurations for pulling / building images
 - Tag and push images to remote repositories
 
 

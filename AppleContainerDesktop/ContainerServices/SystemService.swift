@@ -48,19 +48,19 @@ class SystemService {
             .appendingPathComponent("container-apiserver")
             .resolvingSymlinksInPath()
 
-        let args = [executableUrl.absolutePath()]
+        let args = [executableUrl.absolutePath]
 
         var apiServerDataUrl = appDataRootUrl.appending(path: "apiserver").resolvingSymlinksInPath()
         if !apiServerDataUrl.isFileURL {
-            apiServerDataUrl = URL(filePath: apiServerDataUrl.path(percentEncoded: false))
+            apiServerDataUrl = URL(filePath: apiServerDataUrl.absolutePath)
         }
         
         try FileManager.default.createDirectory(at: apiServerDataUrl, withIntermediateDirectories: true)
         var env = ProcessInfo.processInfo.environment.filter { key, _ in
             key.hasPrefix("CONTAINER_")
         }
-        env[ApplicationRoot.environmentName] = appDataRootUrl.path(percentEncoded: false)
-        env[InstallRoot.environmentName] = installRootDefaultURL.path(percentEncoded: false)
+        env[ApplicationRoot.environmentName] = appDataRootUrl.absolutePath
+        env[InstallRoot.environmentName] = installRootDefaultURL.absolutePath
 
         let logURL = apiServerDataUrl.appending(path: "apiserver.log")
         let plist = LaunchPlist(
@@ -168,7 +168,7 @@ class SystemService {
         let defaultKernelURL = kernelDependency.source
         let defaultKernelBinaryPath = DefaultsStore.get(key: .defaultKernelBinaryPath)
         
-        try await ClientKernel.installKernelFromTar(tarFile: defaultKernelURL, kernelFilePath: defaultKernelBinaryPath, platform: .current)
+        try await ClientKernel.installKernelFromTar(tarFile: defaultKernelURL, kernelFilePath: defaultKernelBinaryPath, platform: .current, force: true)
 
     }
 

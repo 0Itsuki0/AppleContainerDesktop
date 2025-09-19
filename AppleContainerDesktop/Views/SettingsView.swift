@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(UserSettingsManager.self) private var userSettingsManager
@@ -13,10 +14,7 @@ struct SettingsView: View {
     
     @State private var errorMessage: String?
     @State private var showError: Bool = false
-    
-    @State private var showExecutablePathEdit = false
-    @State private var showAppDataPathEdit = false
-    
+        
 
     var body: some View {
         @Bindable var userSettingsManager = userSettingsManager
@@ -30,32 +28,7 @@ struct SettingsView: View {
                             .font(.subheadline)
                     }
                     
-                    
-                    HStack(spacing: 8) {
-                        Text(self.userSettingsManager.executablePathUrl.path(percentEncoded: false))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        
-                        Button {
-                            print(self.userSettingsManager.executablePathUrl.pathExtension)
-                            self.openFile(self.userSettingsManager.executablePathUrl)
-
-                        } label: {
-                            Image(systemName: "arrow.right")
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            self.showExecutablePathEdit = true
-                        }, label: {
-                            Text("Edit")
-                        })
-
-                    }
-
+                    FileSelectView(fileURL: $userSettingsManager.executablePathUrl, errorMessage: $errorMessage, allowedContentTypes: [.executable])
                 }
             }
             
@@ -68,36 +41,7 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .font(.subheadline)
                     }
-                    
-                    
-                    HStack(spacing: 8)  {
-                        
-                        Text(self.userSettingsManager.appRootUrl.path(percentEncoded: false))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        
-                        Button {
-                            
-                            if (FileManager.default.fileExists(atPath: self.userSettingsManager.appRootUrl.path(percentEncoded: false))) {
-                                try? FileManager.default.createDirectory(
-                                    at: self.userSettingsManager.appRootUrl, withIntermediateDirectories: true)
-                            }
-                           
-                            self.openFile(self.userSettingsManager.appRootUrl)
-                        } label: {
-                            Image(systemName: "arrow.right")
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            self.showAppDataPathEdit = true
-                        }, label: {
-                            Text("Edit")
-                        })
-                    }
+                    FileSelectView(fileURL: $userSettingsManager.appRootUrl, errorMessage: $errorMessage, allowedContentTypes: [.directory])
                 }
             }
            
@@ -155,16 +99,6 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .padding(.all, 8)
-        .sheet(isPresented: $showAppDataPathEdit, content: {
-            PathEditView(title: "Edit App Data Path", message: "Changes will take effect the next time system starts.`", onConfirm: { url in
-                self.userSettingsManager.appRootUrl = url
-            }, verifyExecutable: false, verifyFileURL: true, text: self.userSettingsManager.appRootUrl.path(percentEncoded: false))
-        })
-        .sheet(isPresented: $showExecutablePathEdit, content: {
-            PathEditView(title: "Edit Executable Path", message: "Changes will take effect the next time system starts.", onConfirm: { url in
-                self.userSettingsManager.executablePathUrl = url
-            },  verifyExecutable: true, verifyFileURL: false, text: self.userSettingsManager.executablePathUrl.path(percentEncoded: false))
-        })
         .alert("Oops!", isPresented: $showError, actions: {
             Button(action: {
                 self.showError = false
@@ -190,14 +124,13 @@ struct SettingsView: View {
     
     private func openFile(_ url: URL) {
         let result = NSWorkspace.shared.selectFile(
-            url.path(percentEncoded: false),
-            inFileViewerRootedAtPath: url.appending(component: "..").standardized.path(percentEncoded: false)
+            url.absolutePath,
+            inFileViewerRootedAtPath: url.parentDirectory.absolutePath
         )
         if !result {
             self.errorMessage = "Failed to open the File."
         }
     }
-    
 
 }
 

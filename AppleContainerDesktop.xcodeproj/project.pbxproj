@@ -7,9 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		983B3D162E71389C005E1934 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 983B3D152E71389C005E1934 /* LICENSE */; };
-		983B3D172E71389C005E1934 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 983B3D142E71389C005E1934 /* .gitignore */; };
-		9860436F2E6D4A8700FA9B43 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 9860436E2E6D4A8700FA9B43 /* README.md */; };
 		9863C5472E6F9F9900C4AE3C /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5462E6F9F9900C4AE3C /* ContainerBuild */; };
 		9863C5492E6F9F9900C4AE3C /* ContainerBuildCache in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5482E6F9F9900C4AE3C /* ContainerBuildCache */; };
 		9863C54B2E6F9F9900C4AE3C /* ContainerBuildExecutor in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C54A2E6F9F9900C4AE3C /* ContainerBuildExecutor */; };
@@ -17,7 +14,6 @@
 		9863C54F2E6F9F9900C4AE3C /* ContainerBuildParser in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C54E2E6F9F9900C4AE3C /* ContainerBuildParser */; };
 		9863C5512E6F9F9900C4AE3C /* ContainerBuildReporting in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5502E6F9F9900C4AE3C /* ContainerBuildReporting */; };
 		9863C5532E6F9F9900C4AE3C /* ContainerBuildSnapshotter in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5522E6F9F9900C4AE3C /* ContainerBuildSnapshotter */; };
-		9863C5552E6F9F9900C4AE3C /* ContainerClient in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5542E6F9F9900C4AE3C /* ContainerClient */; };
 		9863C5572E6F9F9900C4AE3C /* ContainerImagesService in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5562E6F9F9900C4AE3C /* ContainerImagesService */; };
 		9863C5592E6F9F9900C4AE3C /* ContainerLog in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5582E6F9F9900C4AE3C /* ContainerLog */; };
 		9863C55B2E6F9F9900C4AE3C /* ContainerNetworkService in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C55A2E6F9F9900C4AE3C /* ContainerNetworkService */; };
@@ -27,6 +23,7 @@
 		9863C5632E6F9F9900C4AE3C /* ContainerVersion in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5622E6F9F9900C4AE3C /* ContainerVersion */; };
 		9863C5652E6F9F9900C4AE3C /* ContainerXPC in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5642E6F9F9900C4AE3C /* ContainerXPC */; };
 		9863C5672E6F9F9900C4AE3C /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 9863C5662E6F9F9900C4AE3C /* SocketForwarder */; };
+		986D17572E7BCB1000C8127F /* ContainerCommands in Frameworks */ = {isa = PBXBuildFile; productRef = 986D17562E7BCB1000C8127F /* ContainerCommands */; };
 		98F2D4C92E6BF5A300633147 /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4C82E6BF5A300633147 /* ContainerBuild */; };
 		98F2D4CB2E6BF5A300633147 /* ContainerBuildCache in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4CA2E6BF5A300633147 /* ContainerBuildCache */; };
 		98F2D4CD2E6BF5A300633147 /* ContainerBuildExecutor in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4CC2E6BF5A300633147 /* ContainerBuildExecutor */; };
@@ -53,22 +50,6 @@
 		9860436E2E6D4A8700FA9B43 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		9863C6DF2E711F9D00C4AE3C /* Exceptions for "ReadmeAssets" folder in "AppleContainerDesktop" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				appMenu.png,
-				appSetting.png,
-				createContainer.gif,
-				executableNotFound.png,
-				inspectContainer.gif,
-				overview.gif,
-				pullImage.gif,
-			);
-			target = 9829EC412E17BA3C00A9F8D3 /* AppleContainerDesktop */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -77,9 +58,6 @@
 		};
 		9863C6DD2E711F3900C4AE3C /* ReadmeAssets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				9863C6DF2E711F9D00C4AE3C /* Exceptions for "ReadmeAssets" folder in "AppleContainerDesktop" target */,
-			);
 			path = ReadmeAssets;
 			sourceTree = "<group>";
 		};
@@ -96,6 +74,7 @@
 				9863C5512E6F9F9900C4AE3C /* ContainerBuildReporting in Frameworks */,
 				9863C5472E6F9F9900C4AE3C /* ContainerBuild in Frameworks */,
 				98F2D4CF2E6BF5A300633147 /* ContainerBuildIR in Frameworks */,
+				986D17572E7BCB1000C8127F /* ContainerCommands in Frameworks */,
 				98F2D4E92E6BF5A300633147 /* SocketForwarder in Frameworks */,
 				9863C55B2E6F9F9900C4AE3C /* ContainerNetworkService in Frameworks */,
 				9863C55D2E6F9F9900C4AE3C /* ContainerPersistence in Frameworks */,
@@ -123,7 +102,6 @@
 				98F2D4D72E6BF5A300633147 /* ContainerClient in Frameworks */,
 				98F2D4D52E6BF5A300633147 /* ContainerBuildSnapshotter in Frameworks */,
 				9863C5532E6F9F9900C4AE3C /* ContainerBuildSnapshotter in Frameworks */,
-				9863C5552E6F9F9900C4AE3C /* ContainerClient in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -138,6 +116,7 @@
 				9863C6DD2E711F3900C4AE3C /* ReadmeAssets */,
 				9860436E2E6D4A8700FA9B43 /* README.md */,
 				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+				986D17552E7BCB1000C8127F /* Frameworks */,
 				9829EC432E17BA3C00A9F8D3 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -148,6 +127,13 @@
 				9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		986D17552E7BCB1000C8127F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -167,7 +153,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
-				9863C6DD2E711F3900C4AE3C /* ReadmeAssets */,
 			);
 			name = AppleContainerDesktop;
 			packageProductDependencies = (
@@ -205,6 +190,7 @@
 				9863C5622E6F9F9900C4AE3C /* ContainerVersion */,
 				9863C5642E6F9F9900C4AE3C /* ContainerXPC */,
 				9863C5662E6F9F9900C4AE3C /* SocketForwarder */,
+				986D17562E7BCB1000C8127F /* ContainerCommands */,
 			);
 			productName = AppleContainerDesktop;
 			productReference = 9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */;
@@ -252,9 +238,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				983B3D162E71389C005E1934 /* LICENSE in Resources */,
-				983B3D172E71389C005E1934 /* .gitignore in Resources */,
-				9860436F2E6D4A8700FA9B43 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -509,8 +492,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/container";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.4.1;
+				branch = main;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -600,6 +583,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
 			productName = SocketForwarder;
+		};
+		986D17562E7BCB1000C8127F /* ContainerCommands */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9863C5452E6F9F9900C4AE3C /* XCRemoteSwiftPackageReference "container" */;
+			productName = ContainerCommands;
 		};
 		98F2D4C82E6BF5A300633147 /* ContainerBuild */ = {
 			isa = XCSwiftPackageProductDependency;

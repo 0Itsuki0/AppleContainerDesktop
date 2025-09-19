@@ -212,7 +212,7 @@ struct ContainerDetailView: View {
     @ViewBuilder private func containerInspectView(_ container: ContainerDisplayModel) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16, content: {
-                let environments = EnvConfiguration.fromContainer(container.container)
+                let environments = KeyValueModel.envFromContainer(container.container)
                 Section {
                     if environments.isEmpty {
                         emptyText("No environments added.")

@@ -34,7 +34,7 @@ struct CreateContainerView: View {
     
     @SwiftUI.State private var management: ContainerManagement = .init()
     @SwiftUI.State private var ports: [PortsConfiguration] = []
-    @SwiftUI.State private var environments: [EnvConfiguration] = []
+    @SwiftUI.State private var environments: [KeyValueModel] = []
 
     @SwiftUI.State private var resource: ContainerConfiguration.Resources = .init()
     @SwiftUI.State private var registryScheme: String = RequestScheme.auto.rawValue
@@ -259,7 +259,7 @@ struct CreateContainerView: View {
                                 let validPorts = self.ports.filter({$0.host > 0 && $0.container > 0})
                                 self.management.publishPorts = validPorts.map(\.publishedPort)
                                 let validEnvironments = self.environments.filter({!$0.key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty})
-                                self.process.environments = validEnvironments.map(\.envString)
+                                self.process.environments = validEnvironments.map(\.stringRepresentation)
                                 
                                 try await ContainerService.createContainer(
                                     imageReference: trimmedReference,
@@ -307,6 +307,7 @@ struct CreateContainerView: View {
 
         })
         .animation(.default, value: self.ports.count)
+        .animation(.default, value: self.environments.count)
         .onDisappear {
             self.showProgressView = false
         }

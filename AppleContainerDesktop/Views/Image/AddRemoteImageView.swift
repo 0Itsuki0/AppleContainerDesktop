@@ -1,34 +1,30 @@
 //
-//  PathEditView.swift
+//  AddRemoteImageView.swift
 //  AppleContainerDesktop
 //
-//  Created by Itsuki on 2025/09/08.
+//  Created by Itsuki on 2025/09/19.
 //
-
 
 import SwiftUI
 
-struct PathEditView: View {
+struct AddRemoteImageView: View {
     
-    var title: String
-    var message: String
-    var onConfirm: (URL) -> Void
-    var verifyExecutable: Bool
-    var verifyFileURL: Bool
+    var onConfirm: (String) -> Void
     
-    @State var text: String
-
+    @State private var text: String = ""
     @State private var errorMessages: String?
+    
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading) {
-                Text(title)
+                Text("Pull Remote Image")
                     .font(.headline)
                 
-                Text(message)
+                Text("Please Enter the image reference. For example: \n1. `alpine:latest` \n2. `docker.io/exampleuser/demo:latest` ")
                     .font(.subheadline)
+                    .multilineTextAlignment(.leading)
                     .foregroundStyle(.secondary)
 
             }
@@ -55,27 +51,15 @@ struct PathEditView: View {
                 .buttonStyle(CustomButtonStyle(backgroundShape: .roundedRectangle(4), backgroundColor: .secondary))
                 
                 Button(action: {
-                    guard var url = URL(string: text) else {
-                        self.errorMessages = "Invalid URL."
+                    let trimmedReference = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmedReference.isEmpty else {
+                        self.errorMessages = "Image reference cannot be empty."
                         return
                     }
-                    if !FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
-                        self.errorMessages = "File does not exist."
-                        return
-                    }
-                    if self.verifyExecutable, !FileManager.default.isExecutableFile(atPath: url.path(percentEncoded: false)) {
-                        self.errorMessages = "File is not an executable."
-                        return
-                    }
-                    
-                    if self.verifyFileURL, !url.isFileURL {
-                        url = URL(filePath: url.path(percentEncoded: false))
-                    }
-                    
-                    onConfirm(url)
+                    onConfirm(trimmedReference)
                     self.dismiss()
                 }, label: {
-                    Text("Confirm")
+                    Text("Pull")
                         .padding(.horizontal, 2)
                 })
                 .buttonStyle(CustomButtonStyle(backgroundShape: .roundedRectangle(4), backgroundColor: .blue))

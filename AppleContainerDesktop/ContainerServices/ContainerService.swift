@@ -19,7 +19,7 @@ class ContainerService {
     
     static func createContainer(
         imageReference: String,
-        arguments: [String],
+        arguments: [KeyValueModel],
         process: ContainerProcess,
         management: ContainerManagement,
         resource: ContainerConfiguration.Resources,
@@ -32,7 +32,7 @@ class ContainerService {
 
         let (configuration, kernel) = try await Utility.createContainerConfig(
             imageReference: imageReference,
-            arguments: arguments,
+            arguments: arguments.stringArray,
             process: process,
             management: management,
             resource: resource,

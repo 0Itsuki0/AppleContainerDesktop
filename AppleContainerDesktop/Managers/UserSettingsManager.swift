@@ -11,19 +11,23 @@ import SwiftUI
 
 enum UserDefaultsKey: String {
     case executablePath
-    case appRootURL
+    case appRootPath
     case startSystemTimeoutSeconds
     case stopContainerTimeoutSeconds
     case shutdownSystemTimeoutSeconds
     
     static let userDefaults = UserDefaults.standard
     
+    private var key: String {
+        return self.rawValue
+    }
+    
     func setValue(value: Any?) {
-        Self.userDefaults.setValue(value, forKey: self.rawValue)
+        Self.userDefaults.setValue(value, forKey: self.key)
     }
     
     func getValue() -> Any? {
-        return Self.userDefaults.object(forKey: self.rawValue)
+        return Self.userDefaults.object(forKey: self.key)
     }
 }
 
@@ -49,12 +53,17 @@ class UserSettingsManager {
         }
     }
     
+    // Path URL
     var executablePathUrl: URL {
         get {
-            return URL(string: self.executablePathString) ?? URL(string: self.executablePathString)!
+            if let url = URL(string: executablePathString), !url.isFileURL {
+                return url
+            }
+            let fileURL = URL(filePath: executablePathString)
+            return URL(string: fileURL.absolutePath) ?? URL(string: self.executablePathString)!
         }
         set(newValue) {
-            self.executablePathString = newValue.path(percentEncoded: true)
+            self.executablePathString = newValue.absolutePath
         }
     }
     
@@ -62,18 +71,22 @@ class UserSettingsManager {
         return FileManager.default.isExecutableFile(atPath: self.executablePathString)
     }
     
-    private var appRootUrlString: String {
+    private var appRootPathString: String {
         didSet {
-            UserDefaultsKey.appRootURL.setValue(value: self.appRootUrlString)
+            UserDefaultsKey.appRootPath.setValue(value: self.appRootPathString)
         }
     }
     
+    // file scheme URL, ie: file://
     var appRootUrl: URL  {
         get {
-            return URL(string: appRootUrlString) ?? Self.defaultAppRootUrl
+            if let url = URL(string: appRootPathString), url.isFileURL {
+                return url
+            }
+            return URL(filePath: appRootPathString)
         }
         set(newValue) {
-            self.appRootUrlString = newValue.absoluteString
+            self.appRootPathString = newValue.absolutePath
         }
     }
    
@@ -99,10 +112,10 @@ class UserSettingsManager {
     
     init() {
         self.executablePathString = UserDefaultsKey.executablePath.getValue() as? String ?? Self.defaultExecutablePathString
-        self.appRootUrlString = UserDefaultsKey.appRootURL.getValue() as? String ?? Self.defaultAppRootUrl.absoluteString
-        self.startSystemTimeoutSeconds = UserDefaultsKey.appRootURL.getValue() as? Int32 ?? Self.defaultStartSystemTimeoutSeconds
-        self.stopContainerTimeoutSeconds = UserDefaultsKey.appRootURL.getValue() as? Int32 ?? Self.defaultStopContainerTimeoutSeconds
-        self.shutdownSystemTimeoutSeconds = UserDefaultsKey.appRootURL.getValue() as? Int32 ?? Self.defaultShutdownSystemTimeoutSeconds
+        self.appRootPathString = UserDefaultsKey.appRootPath.getValue() as? String ?? Self.defaultAppRootUrl.absolutePath
+        self.startSystemTimeoutSeconds = UserDefaultsKey.appRootPath.getValue() as? Int32 ?? Self.defaultStartSystemTimeoutSeconds
+        self.stopContainerTimeoutSeconds = UserDefaultsKey.appRootPath.getValue() as? Int32 ?? Self.defaultStopContainerTimeoutSeconds
+        self.shutdownSystemTimeoutSeconds = UserDefaultsKey.appRootPath.getValue() as? Int32 ?? Self.defaultShutdownSystemTimeoutSeconds
     }
 
 }

@@ -357,6 +357,11 @@ struct Utility {
         )
     }
     
+    nonisolated
+    static func keyValueString(key: String, value: String) -> String {
+        return "\(key)=\(value)"
+    }
+    
     
     // TODO: Use plugin loader
 //    static func createPluginLoader() async throws -> PluginLoader {
