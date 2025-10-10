@@ -1,0 +1,104 @@
+name: Build and Release Apple Container Desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    name: Build Release Artifact (Apple Silicon)
+    runs-on: macos-26
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      zip: ${{ steps.artifacts.outputs.zip }}
+      dmg: ${{ steps.artifacts.outputs.dmg }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set release version
+        id: version
+        run: |
+          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+            echo "value=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "value=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build (Release)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project AppleContainerDesktop.xcodeproj \
+            -scheme AppleContainerDesktop \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'platform=macOS,arch=arm64' \
+            build
+
+      - name: Prepare artifacts
+        id: artifacts
+        run: |
+          set -euo pipefail
+          APP_PATH="build/Build/Products/Release/AppleContainerDesktop.app"
+          if [[ ! -d "$APP_PATH" ]]; then
+            echo "App bundle not found at $APP_PATH" >&2
+            exit 1
+          fi
+
+          mkdir -p artifacts
+          ZIP_PATH="artifacts/AppleContainerDesktop.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
+
+          DMG_PATH="artifacts/AppleContainerDesktop.dmg"
+          hdiutil create -volname "AppleContainerDesktop" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_PATH"
+
+          echo "zip=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+          echo "dmg=$DMG_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppleContainerDesktop-${{ steps.version.outputs.value }}
+          path: |
+            ${{ steps.artifacts.outputs.zip }}
+            ${{ steps.artifacts.outputs.dmg }}
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub Release
+    needs: build
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: AppleContainerDesktop-${{ needs.build.outputs.version }}
+          path: release
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            release/AppleContainerDesktop.zip
+            release/AppleContainerDesktop.dmg
+          tag_name: ${{ needs.build.outputs.version }}
+          name: ${{ needs.build.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
