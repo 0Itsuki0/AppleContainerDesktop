@@ -10,10 +10,12 @@ import ContainerCommands
 import ContainerPersistence
 import ContainerPlugin
 import ContainerResource
+internal import ContainerVersion
 internal import ContainerizationEXT4
 import ContainerizationError
 internal import ContainerizationOCI
 import Foundation
+import SystemPackage
 
 class SystemService {
 
@@ -27,9 +29,11 @@ class SystemService {
     ) async throws {
         let installRootDefaultURL: URL = InstallRoot(executablePathUrl)
             .defaultURL
+        let appRoot = FilePath(appDataRootUrl)
+        let installRoot = FilePath(installRootDefaultURL)
 
         try ConfigurationLoader.copyConfigurationToReadOnly(
-            to: .init(appDataRootUrl)
+            to: appRoot
         )
         // Pass appRoot before installRoot: ConfigurationLoader uses first-match-wins
         // precedence, so user-provided config in appRoot overrides the defaults
@@ -40,11 +44,11 @@ class SystemService {
             try await ConfigurationLoader.load(
                 configurationFiles: [
                     ConfigurationLoader.configurationFile(
-                        in: .init(appDataRootUrl),
+                        in: appRoot,
                         of: .appRoot
                     ),
                     ConfigurationLoader.configurationFile(
-                        in: .init(installRootDefaultURL),
+                        in: installRoot,
                         of: .installRoot
                     ),
                 ])
@@ -53,41 +57,41 @@ class SystemService {
 
         // Without the true path to the binary in the plist, `container-apiserver` won't launch properly.
         // TODO: Use plugin loader for API server.
-        let executableUrl =
-            executablePathUrl
-            .deletingLastPathComponent()
-            .appendingPathComponent("container-apiserver")
-            .resolvingSymlinksInPath()
+        let executablePath = try FilePath(executablePathUrl)
+            .removingLastComponent()
+            .appending(FilePath.Component("container-apiserver"))
+            .resolvingSymlinks()
 
-        let args = [executableUrl.absolutePath]
+        var args = [executablePath.string]
+        args.append("start")
 
-        var apiServerDataUrl = appDataRootUrl.appending(path: "apiserver")
-            .resolvingSymlinksInPath()
-        if !apiServerDataUrl.isFileURL {
-            apiServerDataUrl = URL(filePath: apiServerDataUrl.absolutePath)
-        }
-
+        let apiServerDataPath = appRoot.appending(
+            FilePath.Component("apiserver")
+        )
+        let apiServerDataURL = URL(fileURLWithPath: apiServerDataPath.string)
         try FileManager.default.createDirectory(
-            at: apiServerDataUrl,
+            at: apiServerDataURL,
             withIntermediateDirectories: true
         )
-        var env = PluginLoader.filterEnvironment()
-        env[ApplicationRoot.environmentName] = appDataRootUrl.absolutePath
-        env[InstallRoot.environmentName] = installRootDefaultURL.absolutePath
 
-        let logURL = apiServerDataUrl.appending(path: "apiserver.log")
+        var env = PluginLoader.filterEnvironment()
+        env[ApplicationRoot.environmentName] = appRoot.string
+        env[InstallRoot.environmentName] =
+            FilePath(installRootDefaultURL).string
+
         let plist = LaunchPlist(
             label: "\(launchPrefix)apiserver",
             arguments: args,
             environment: env,
             limitLoadToSessionType: [.Aqua, .Background, .System],
             runAtLoad: true,
-            stdout: logURL.path,
-            stderr: logURL.path,
             machServices: ["\(launchPrefix)apiserver"]
         )
 
-        let plistURL = apiServerDataUrl.appending(path: "apiserver.plist")
+        let plistPath = apiServerDataPath.appending(
+            FilePath.Component("apiserver.plist")
+        )
+        let plistURL = URL(fileURLWithPath: plistPath.string)
         let data = try plist.encode()
         try data.write(to: plistURL)
 

@@ -35,7 +35,7 @@ struct ContentView: View {
                 }
                 .padding()
                 .buttonStyle(.plain)
-                .navigationSplitViewColumnWidth(160)
+                .navigationSplitViewColumnWidth(180)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
                 .background(Color.gray.opacity(0.1))
 
@@ -99,7 +99,6 @@ struct ContentView: View {
                         Image(systemName: "ellipsis")
                     })
                     .menuIndicator(.hidden)
-
                 })
 
             })
