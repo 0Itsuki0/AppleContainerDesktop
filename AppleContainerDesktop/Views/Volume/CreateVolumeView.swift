@@ -7,7 +7,7 @@
 
 
 import SwiftUI
-import ContainerClient
+
 internal import ContainerizationOCI
 
 

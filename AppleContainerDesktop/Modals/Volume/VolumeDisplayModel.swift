@@ -6,16 +6,15 @@
 //
 
 import Foundation
-
-import ContainerClient
+import ContainerResource
+import ContainerAPIClient
 
 @dynamicMemberLookup
 struct VolumeDisplayModel: Identifiable {
-    var volume: Volume
-    
+    var volume: VolumeConfiguration
     
     var created: String {
-        return Formatter.dateFormatter.string(from: volume.createdAt)
+        return Formatter.dateFormatter.string(from: volume.creationDate)
     }
     
     var size: String? {
@@ -30,7 +29,7 @@ struct VolumeDisplayModel: Identifiable {
         return volume.id
     }
     
-    var inUseContainers: [ClientContainer]
+    var inUseContainers: [ContainerSnapshot]
     var inUse: Bool {
         return !inUseContainers.isEmpty
     }
@@ -40,14 +39,14 @@ struct VolumeDisplayModel: Identifiable {
     }
     
     var labels: [String : String] {
-        self.volume.labels.filter({$0.key != Volume.anonymousLabel})
+        self.volume.labels.filter({$0.key != VolumeConfiguration.anonymousLabel})
     }
     
     var options: [String : String] {
-        self.volume.options.filter({$0.key != Volume.sizeOptionKey})
+        self.volume.options.filter({$0.key != VolumeConfiguration.sizeOptionKey})
     }
 
-    init(_ volume: Volume, containers: [ClientContainer]) {
+    init(_ volume: VolumeConfiguration, containers: [ContainerSnapshot]) {
         self.volume = volume
         self.inUseContainers = containers.filter({ container in
             container.volumeNames.contains(volume.name)
@@ -57,7 +56,7 @@ struct VolumeDisplayModel: Identifiable {
 }
 
 extension VolumeDisplayModel {
-    subscript<T>(dynamicMember keyPath: KeyPath<Volume, T>) -> T {
+    subscript<T>(dynamicMember keyPath: KeyPath<VolumeConfiguration, T>) -> T {
         return volume[keyPath: keyPath]
     }
 }

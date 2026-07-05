@@ -6,8 +6,9 @@
 //
 
 import Foundation
-internal import ContainerizationOCI
-import ContainerClient
+//internal import ContainerizationOCI
+import ContainerResource
+import ContainerAPIClient
 
  struct ContainerManagement {
      // Override the entryPoint of the image
@@ -80,4 +81,13 @@ import ContainerClient
 
      // Forward SSH agent socket to container
      var ssh = false
+     
+     // "Mount the container's root filesystem as read-only")
+     public var readOnly = false
+
+     // "Run an init process inside the container that forwards signals and reaps processes")
+     public var useInit = false
+     
+     // Use a custom init image instead of the default
+     public var initImage: String?
 }

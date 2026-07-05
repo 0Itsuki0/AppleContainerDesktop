@@ -7,10 +7,11 @@
 
 import Foundation
 
-import ContainerClient
-internal import ContainerizationOCI
 
-extension ClientContainer {
+internal import ContainerizationOCI
+import ContainerResource
+
+extension ContainerSnapshot {
     
     var imageName: String {
         return self.configuration.image.name

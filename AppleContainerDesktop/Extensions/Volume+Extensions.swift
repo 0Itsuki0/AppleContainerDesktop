@@ -6,8 +6,8 @@
 //
 
 
-import ContainerClient
+import ContainerResource
 
-extension Volume {
+extension VolumeConfiguration {
     static let sizeOptionKey: String = "size"
 }

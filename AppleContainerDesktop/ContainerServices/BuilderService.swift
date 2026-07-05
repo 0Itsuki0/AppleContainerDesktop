@@ -5,29 +5,37 @@
 //  Created by Itsuki on 2025/09/18.
 //
 
-import Foundation
-
+import ContainerAPIClient
 import ContainerBuild
-import ContainerClient
-import ContainerNetworkService
 import ContainerPersistence
+import ContainerResource
 import Containerization
 import ContainerizationError
 import ContainerizationExtras
 internal import ContainerizationOCI
 import ContainerizationOS
+import Foundation
 
 class BuilderService {
-    
+
     static let buildkitContainerId = "buildkit"
-    
+    static private let containerSystemConfig = ContainerSystemConfig()
+
     // memory: bytes
-    static func startBuilder(cpus: Int64 = 2, memory: UInt64 = 1024.mib(), messageStreamContinuation: AsyncStream<String>.Continuation?) async throws {
+    static func startBuilder(
+        cpus: Int64 = 2,
+        memory: UInt64 = 1024.mib(),
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
         messageStreamContinuation?.yield("Fetching BuildKit image...")
 
-        let builderImage: String = DefaultsStore.get(key: .defaultBuilderImage)
-        let systemHealth = try await ClientHealthCheck.ping(timeout: .seconds(10))
-        let exportsMount: String = systemHealth.appRoot.appendingPathComponent(".build").absolutePath
+        let builderImage: String = containerSystemConfig.build.image
+        let systemHealth = try await ClientHealthCheck.ping(
+            timeout: .seconds(10)
+        )
+        let exportsMount: String = systemHealth.appRoot.appendingPathComponent(
+            ".build"
+        ).absolutePath
 
         if !FileManager.default.fileExists(atPath: exportsMount) {
             try FileManager.default.createDirectory(
@@ -37,40 +45,68 @@ class BuilderService {
             )
         }
 
-        let builderPlatform = ContainerizationOCI.Platform(arch: "arm64", os: "linux", variant: "v8")
+        let builderPlatform = ContainerizationOCI.Platform(
+            arch: "arm64",
+            os: "linux",
+            variant: "v8"
+        )
+        
+        var targetEnvVars: [String] = []
+        if let buildkitColors = ProcessInfo.processInfo.environment["BUILDKIT_COLORS"] {
+            targetEnvVars.append("BUILDKIT_COLORS=\(buildkitColors)")
+        }
+        if ProcessInfo.processInfo.environment["NO_COLOR"] != nil {
+            targetEnvVars.append("NO_COLOR=true")
+        }
+        targetEnvVars.sort()
 
-        let existingContainer = try? await ClientContainer.get(id: buildkitContainerId)
+        let client = ContainerClient()
+        let existingContainer = try? await client.get(id: buildkitContainerId)
 
         if let existingContainer {
             let existingImage = existingContainer.configuration.image.reference
             let existingResources = existingContainer.configuration.resources
+            let existingEnv = existingContainer.configuration.initProcess
+                .environment
+            // let existingDNS = existingContainer.configuration.dns
+
+            let existingManagedEnv = existingEnv.filter { envVar in
+                envVar.hasPrefix("BUILDKIT_COLORS=") || envVar.hasPrefix("NO_COLOR=")
+            }.sorted()
 
             // Check if we need to recreate the builder due to different image
             let imageChanged = existingImage != builderImage
             let cpuChanged = existingResources.cpus != cpus
             let memChanged = existingResources.memoryInBytes != memory
+            let envChanged = existingManagedEnv != targetEnvVars
+
 
             switch existingContainer.status {
             case .running:
-                guard imageChanged || cpuChanged || memChanged else {
-                    // If image, mem and cpu are the same, continue using the existing builder
+                guard imageChanged || cpuChanged || memChanged || envChanged else {
+                    // If image, mem, cpu, env, and DNS are the same, continue using the existing builder
                     return
                 }
                 // If they changed, stop and delete the existing builder
-                try await existingContainer.stop()
-                try await existingContainer.delete()
+                try await client.stop(id: existingContainer.id)
+                try await client.delete(id: existingContainer.id)
             case .stopped:
                 // If the builder is stopped and matches our requirements, start it
                 // Otherwise, delete it and create a new one
-                guard imageChanged || cpuChanged || memChanged else {
-                    try await startBuildKit(existingContainer, messageStreamContinuation: messageStreamContinuation)
+                guard imageChanged || cpuChanged || memChanged || envChanged else {
+                    try await startBuildKit(
+                        client: client,
+                        id: existingContainer.id,
+                        messageStreamContinuation: messageStreamContinuation
+                    )
                     return
                 }
-                try await existingContainer.delete()
+                try await client.delete(id: existingContainer.id)
             case .stopping:
                 throw ContainerizationError(
                     .invalidState,
-                    message: "builder is stopping, please wait until it is fully stopped before proceeding"
+                    message:
+                        "builder is stopping, please wait until it is fully stopped before proceeding"
                 )
             case .unknown:
                 break
@@ -82,7 +118,9 @@ class BuilderService {
             "--vsock",
         ]
 
-        try ContainerClient.Utility.validEntityName(buildkitContainerId)
+        try ContainerAPIClient.Utility.validEntityName(
+            Builder.builderContainerId
+        )
 
         let processConfig = ProcessConfiguration(
             executable: "/usr/local/bin/container-builder-shim",
@@ -100,28 +138,44 @@ class BuilderService {
         let image = try await ClientImage.fetch(
             reference: builderImage,
             platform: builderPlatform,
+            containerSystemConfig: containerSystemConfig,
             progressUpdate: { events in
-                Utility.updateProgress(events, messageStreamContinuation: messageStreamContinuation)
+                AdditionalUtility.updateProgress(
+                    events,
+                    messageStreamContinuation: messageStreamContinuation
+                )
             }
         )
-        
+
         // Unpack fetched image before use
         messageStreamContinuation?.yield("Unpacking BuildKit image...")
-        
+
         _ = try await image.getCreateSnapshot(
             platform: builderPlatform,
             progressUpdate: { events in
-                Utility.updateProgress(events, messageStreamContinuation: messageStreamContinuation)
+                AdditionalUtility.updateProgress(
+                    events,
+                    messageStreamContinuation: messageStreamContinuation
+                )
             }
         )
-        
+
         let imageConfig = ImageDescription(
             reference: builderImage,
             descriptor: image.descriptor
         )
 
-        var config = ContainerConfiguration(id: buildkitContainerId, image: imageConfig, process: processConfig)
+        var config = ContainerConfiguration(
+            id: buildkitContainerId,
+            image: imageConfig,
+            process: processConfig
+        )
         config.resources = resources
+        config.labels = [
+            ResourceLabelKeys.plugin: "builder",
+            ResourceLabelKeys.role: ResourceRoleValues.builder,
+        ]
+        config.capAdd = ["ALL"]
         config.mounts = [
             .init(
                 type: .tmpfs,
@@ -137,20 +191,29 @@ class BuilderService {
             ),
         ]
         // Enable Rosetta only if the user didn't ask to disable it
-        config.rosetta = DefaultsStore.getBool(key: .buildRosetta) ?? true
+        config.rosetta = true
 
-        let network = try await ClientNetwork.get(id: ClientNetwork.defaultNetworkName)
-
-        guard case .running(_, let networkStatus) = network else {
-            return
+        let networkClient = NetworkClient()
+        guard let defaultNetwork = try await networkClient.builtin else {
+            throw ContainerizationError(
+                .invalidState,
+                message: "default network is not present"
+            )
         }
+        config.networks = [
+            AttachmentConfiguration(
+                network: defaultNetwork.id,
+                options: AttachmentOptions(hostname: Builder.builderContainerId)
+            )
+        ]
 
-        
-        config.networks = [AttachmentConfiguration(network: network.id, options: AttachmentOptions(hostname: buildkitContainerId))]
-        let subnet = try CIDRAddress(networkStatus.address)
-        let nameServer = IPv4Address(fromValue: subnet.lower.value + 1).description
+        let nameServer = IPv4Address(
+            defaultNetwork.status.ipv4Subnet.lower.value + 1
+        ).description
         let nameServers = [nameServer]
-        config.dns = ContainerConfiguration.DNSConfiguration(nameservers: nameServers)
+        config.dns = ContainerConfiguration.DNSConfiguration(
+            nameservers: nameServers
+        )
 
         let kernel = try await {
             messageStreamContinuation?.yield("Fetching kernel...")
@@ -160,25 +223,28 @@ class BuilderService {
 
         messageStreamContinuation?.yield("Creating BuildKit container...")
 
-        let container = try await ClientContainer.create(
+        try await client.create(
             configuration: config,
             options: .default,
             kernel: kernel
         )
+        try await startBuildKit(
+            client: client,
+            id: Builder.builderContainerId,
+            messageStreamContinuation: messageStreamContinuation
+        )
 
-        try await startBuildKit(container, messageStreamContinuation: messageStreamContinuation)
-        
         messageStreamContinuation?.yield("Builder started...")
 
     }
-    
-    
-    private static func startBuildKit(_ container: ClientContainer, messageStreamContinuation: AsyncStream<String>.Continuation?) async throws {
+
+    private static func startBuildKit(
+        client: ContainerClient,
+        id: String,
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
         messageStreamContinuation?.yield("Starting build kit...")
 
-        guard container.id == buildkitContainerId else {
-            return
-        }
         do {
             let io = try ProcessIO.create(
                 tty: false,
@@ -187,20 +253,35 @@ class BuilderService {
             )
             defer { try? io.close() }
 
-            messageStreamContinuation?.yield("Bootstrapping buildkit container...")
+            var dynamicEnv: [String: String] = [:]
+            if let sshAuthSock = ProcessInfo.processInfo.environment[
+                "SSH_AUTH_SOCK"
+            ] {
+                dynamicEnv["SSH_AUTH_SOCK"] = sshAuthSock
+            }
 
-            let process = try await container.bootstrap(stdio: io.stdio)
+            messageStreamContinuation?.yield(
+                "Bootstrapping buildkit container..."
+            )
 
+            let process = try await client.bootstrap(
+                id: id,
+                stdio: io.stdio,
+                dynamicEnv: dynamicEnv
+            )
             _ = try await process.start()
             try io.closeAfterStart()
 
         } catch {
-            try? await container.stop()
-            try? await container.delete()
+            try? await client.stop(id: id)
+            try? await client.delete(id: id)
             if error is ContainerizationError {
                 throw error
             }
-            throw ContainerizationError(.internalError, message: "failed to start BuildKit: \(error)")
+            throw ContainerizationError(
+                .internalError,
+                message: "failed to start BuildKit: \(error)"
+            )
         }
     }
 }

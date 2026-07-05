@@ -6,8 +6,7 @@
 //
 
 import Foundation
-
-import ContainerClient
+import ContainerResource
 internal import ContainerizationOCI
 
 // ID for ClientContainer
@@ -36,9 +35,9 @@ struct ContainerDisplayModel: Identifiable {
         self.status.rawValue.localizedCapitalized
     }
     
-    var container: ClientContainer
+    var container: ContainerSnapshot
         
-    init(_ container: ClientContainer) {
+    init(_ container: ContainerSnapshot) {
         self.imageDescription = container.configuration.image
         self.ports = container.portsString ?? "None"
         self.os = container.configuration.platform.os.localizedCapitalized

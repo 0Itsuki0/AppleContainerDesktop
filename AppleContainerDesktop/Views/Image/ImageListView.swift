@@ -5,23 +5,22 @@
 //  Created by Itsuki on 2025/09/08.
 //
 
-
-import SwiftUI
-import ContainerClient
+import ContainerAPIClient
 import ContainerizationError
-
+import SwiftUI
+import ContainerResource
 
 struct ImageListView: View {
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(UserSettingsManager.self) private var userSettingsManager
 
     @State private var searchText: String = ""
-    
+
     @State private var images: [ImageDisplayModel] = []
     @State private var lastUpdated: Date? = nil
 
     @State private var selections = Set<ImageDisplayModel.ID>()
-    
+
     @State private var createContainerForImage: ImageDisplayModel? = nil
 
     @State private var showInUseContainerForImage: ImageDisplayModel?
@@ -31,332 +30,483 @@ struct ImageListView: View {
     @State private var showLoadImageView: Bool = false
 
     @State private var showSaveImageView: Bool = false
-    @State private var imagesToSave: String =  ""
+    @State private var imagesToSave: String = ""
 
     private var trimmedText: String {
         self.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     private var filteredImages: [ImageDisplayModel] {
         if trimmedText.isEmpty {
             return images
         }
         let filtered = self.images.filter({
-            $0.name.contains(trimmedText) ||
-            $0.tag.contains(trimmedText)
+            $0.name.contains(trimmedText) || $0.tag.contains(trimmedText)
         })
-        
+
         return filtered
     }
-    
 
     var body: some View {
-        VStack(alignment: .leading , spacing: 24) {
+        VStack(alignment: .leading, spacing: 24) {
             HStack(alignment: .lastTextBaseline) {
                 HStack {
                     Text(DisplayCategory.image.displayTitle)
                         .font(.title2)
                         .fontWeight(.bold)
 
-                    Menu(content: {
-                        Button(action: {
-                            self.showPullRemoteView = true
-                        }, label: {
-                            Text("Pull Remote")
-                        })
-                        
-                        Button(action: {
-                            self.showBuildImageView = true
-                        }, label: {
-                            Text("Build From Dockerfile")
-                        })
-                        
-                        Button(action: {
-                            self.showLoadImageView = true
-                        }, label: {
-                            Text("Load From Tar")
-                        })
-                        
-                    }, label: {
-                        Image(systemName: "plus")
-                            .font(.subheadline)
+                    Menu(
+                        content: {
+                            Button(
+                                action: {
+                                    self.showPullRemoteView = true
+                                },
+                                label: {
+                                    Text("Pull Remote")
+                                }
+                            )
 
-                    })
+                            Button(
+                                action: {
+                                    self.showBuildImageView = true
+                                },
+                                label: {
+                                    Text("Build From Dockerfile")
+                                }
+                            )
+
+                            Button(
+                                action: {
+                                    self.showLoadImageView = true
+                                },
+                                label: {
+                                    Text("Load From Tar")
+                                }
+                            )
+
+                        },
+                        label: {
+                            Image(systemName: "plus")
+                                .font(.subheadline)
+
+                        }
+                    )
                     .menuIndicator(.hidden)
-                    .buttonStyle(CustomButtonStyle(backgroundShape: .circle, backgroundColor: .blue))
+                    .buttonStyle(
+                        CustomButtonStyle(
+                            backgroundShape: .circle,
+                            backgroundColor: .blue
+                        )
+                    )
 
                 }
-
 
                 Spacer()
-                
+
                 if let lastUpdated {
                     HStack {
-                        Text(String("Last updated \(lastUpdated.formatted(date: .omitted, time: .standard))"))
-                        
-                        Button(action: {
-                            Task {
-                                await self.listImages()
+                        Text(
+                            String(
+                                "Last updated \(lastUpdated.formatted(date: .omitted, time: .standard))"
+                            )
+                        )
+
+                        Button(
+                            action: {
+                                Task {
+                                    await self.listImages()
+                                }
+                            },
+                            label: {
+                                Image(
+                                    systemName:
+                                        "arrow.trianglehead.clockwise.rotate.90"
+                                )
                             }
-                        }, label: {
-                            Image(systemName: "arrow.trianglehead.clockwise.rotate.90")
-                        })
+                        )
                     }
-                    
+
                 }
             }
-            
+
             HStack(spacing: 36) {
                 SearchBox(text: $searchText)
                     .frame(width: 280)
-                
+
                 Spacer()
-                
+
                 if !selections.isEmpty {
-                    let selectedImages = self.images.filter({self.selections.contains($0.id)})
-                    let allDeletable = !selectedImages.contains(where: {$0.inUse})
-                    
+                    let selectedImages = self.images.filter({
+                        self.selections.contains($0.id)
+                    })
+                    let allDeletable = !selectedImages.contains(where: {
+                        $0.inUse
+                    })
+
                     HStack {
-                        Button(action: {
-                            Task {
-                                self.applicationManager.showProgressView = selectedImages.count > 1
-                                do {
-                                    try await ImageService.deleteImages(selectedImages.map(\.image), messageStreamContinuation: applicationManager.messageStreamContinuation)
-                                    await self.listImages()
-                                    self.applicationManager.showProgressView = false
-                                } catch (let error) {
-                                    applicationManager.error = error
+                        Button(
+                            action: {
+                                Task {
+                                    self.applicationManager.showProgressView =
+                                        selectedImages.count > 1
+                                    do {
+                                        try await ImageService.deleteImages(
+                                            selectedImages.map(\.image),
+                                            messageStreamContinuation:
+                                                applicationManager
+                                                .messageStreamContinuation
+                                        )
+                                        await self.listImages()
+                                        self.applicationManager
+                                            .showProgressView = false
+                                    } catch (let error) {
+                                        applicationManager.error = error
+                                    }
                                 }
+                            },
+                            label: {
+                                Text("Delete")
+                                    .padding(.horizontal, 2)
                             }
-                        }, label: {
-                            Text("Delete")
-                                .padding(.horizontal, 2)
-                        })
+                        )
                         .disabled(!allDeletable)
-                        .buttonStyle(CustomButtonStyle(backgroundShape: .roundedRectangle(4), backgroundColor: .red, disabled: !allDeletable))
-                        
-                        Button(action: {
-                            self.imagesToSave = selectedImages.map(\.image.reference).joined(separator: ",")
-                            self.showSaveImageView = true
-                        }, label: {
-                            Text("Save")
-                                .padding(.horizontal, 2)
-                        })
-                        .buttonStyle(CustomButtonStyle(backgroundShape: .roundedRectangle(4), backgroundColor: .blue))
+                        .buttonStyle(
+                            CustomButtonStyle(
+                                backgroundShape: .roundedRectangle(4),
+                                backgroundColor: .red,
+                                disabled: !allDeletable
+                            )
+                        )
+
+                        Button(
+                            action: {
+                                self.imagesToSave = selectedImages.map(
+                                    \.image.reference
+                                ).joined(separator: ",")
+                                self.showSaveImageView = true
+                            },
+                            label: {
+                                Text("Save")
+                                    .padding(.horizontal, 2)
+                            }
+                        )
+                        .buttonStyle(
+                            CustomButtonStyle(
+                                backgroundShape: .roundedRectangle(4),
+                                backgroundColor: .blue
+                            )
+                        )
                     }
-                }                
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-                        
-            Table(of: ImageDisplayModel.self, selection: $selections, columns: {
-                TableColumn(TableHelper.columnHeader("Name")) { image in
-                    
-                    Text(image.name)
-                        .font(.headline)
-                        .lineLimit(1)
-                        .frame(height: 48)
-                }
-                .width(min: 80, ideal: 80)
-                
-                TableColumn(TableHelper.columnHeader("Tag")) { image in
-                    Text(image.tag)
-                        .lineLimit(1)
-                }
-                .width(min: 64, ideal: 64)
-                
-                TableColumn(TableHelper.columnHeader("State")) { image in
-                    
-                    Group {
-                        if image.inUse {
-                            Button(action: {
-                                showInUseContainerForImage = image
-                            }, label: {
-                                Text("In use")
-                                    .lineLimit(1)
-                                    .underline()
 
-                            })
-                            .buttonStyle(.link)
-                        } else {
-                            Text("Unused")
-                        }
+            Table(
+                of: ImageDisplayModel.self,
+                selection: $selections,
+                columns: {
+                    TableColumn(TableHelper.columnHeader("Name")) { image in
+
+                        Text(image.name)
+                            .font(.headline)
+                            .lineLimit(1)
+                            .frame(height: 48)
                     }
-                    .lineLimit(1)
+                    .width(min: 80, ideal: 80)
 
-                }
-                .width(64)
+                    TableColumn(TableHelper.columnHeader("Tag")) { image in
+                        Text(image.tag)
+                            .lineLimit(1)
+                    }
+                    .width(min: 64, ideal: 64)
 
-                
-                
-                TableColumn(TableHelper.columnHeader("OS")) { image in
-                    Text(image.os)
-                }
-                .width(min: 36, ideal: 36, max: 72)
+                    TableColumn(TableHelper.columnHeader("State")) { image in
 
-                TableColumn(TableHelper.columnHeader("Arch")) { image in
-                    Text(image.arch)
-                }
-                .width(min: 48, ideal: 48, max: 72)
+                        Group {
+                            if image.inUse {
+                                Button(
+                                    action: {
+                                        showInUseContainerForImage = image
+                                    },
+                                    label: {
+                                        Text("In use")
+                                            .lineLimit(1)
+                                            .underline()
 
-                
-                TableColumn(TableHelper.columnHeader("Variant")) { image in
-                    Text(image.variant)
-                }
-                .width(64)
-                
-                TableColumn(TableHelper.columnHeader("Size")) { image in
-                    Text(image.size)
-                }
-                .width(64)
-                
-                TableColumn(TableHelper.columnHeader("Created")) { image in
-                    Text(image.created)
-                }
-                .width(min: 64, ideal: 64, max: 200)
-
-                TableColumn(TableHelper.columnHeader("Actions")) { image in
-
-                    HStack(spacing: 12) {
-                        Button(action: {
-                            self.imagesToSave = image.image.reference
-                            self.showSaveImageView = true
-                        }, label: {
-                            TableHelper.actionImage(systemName: "folder.fill")
-                        })
-                        .buttonStyle(CustomButtonStyle(backgroundShape: .circle, backgroundColor: .blue))
-
-                        
-                        Button(action: {
-                            self.createContainerForImage = image
-                        }, label: {
-                            TableHelper.actionImage(systemName: "cube.fill")
-                        })
-                        .buttonStyle(CustomButtonStyle(backgroundShape: .circle, backgroundColor: .blue))
-
-
-                        
-                        Divider()
-                            .padding(.vertical, 12)
-                        
-                        Button(action: {
-                            Task {
-                                self.applicationManager.showProgressView = true
-                                do {
-                                    try await ImageService.deleteImages([image.image], messageStreamContinuation: applicationManager.messageStreamContinuation)
-                                    
-                                    await self.listImages()
-                                    self.applicationManager.showProgressView = false
-                                } catch (let error) {
-                                    applicationManager.error = error
-                                }
+                                    }
+                                )
+                                .buttonStyle(.link)
+                            } else {
+                                Text("Unused")
                             }
-                        }, label: {
-                            TableHelper.actionImage(systemName: "trash.fill")
-                        })
-                        .disabled(image.inUse)
-                        .buttonStyle(CustomButtonStyle(backgroundShape: .circle, backgroundColor: .red, disabled: image.inUse))
+                        }
+                        .lineLimit(1)
 
                     }
-                    .padding(.horizontal, 8)
-                }
-                .width(128)
-                
+                    .width(64)
 
-            }, rows: {
-                ForEach(filteredImages)
-            })
+                    TableColumn(TableHelper.columnHeader("OS")) { image in
+                        Text(image.os)
+                    }
+                    .width(min: 36, ideal: 36, max: 72)
+
+                    TableColumn(TableHelper.columnHeader("Arch")) { image in
+                        Text(image.arch)
+                    }
+                    .width(min: 48, ideal: 48, max: 72)
+
+                    TableColumn(TableHelper.columnHeader("Variant")) { image in
+                        Text(image.variant)
+                    }
+                    .width(64)
+
+                    TableColumn(TableHelper.columnHeader("Size")) { image in
+                        Text(image.size)
+                    }
+                    .width(64)
+
+                    TableColumn(TableHelper.columnHeader("Created")) { image in
+                        Text(image.created)
+                    }
+                    .width(min: 64, ideal: 64, max: 200)
+
+                    TableColumn(TableHelper.columnHeader("Actions")) { image in
+
+                        HStack(spacing: 12) {
+                            Button(
+                                action: {
+                                    self.imagesToSave = image.image.reference
+                                    self.showSaveImageView = true
+                                },
+                                label: {
+                                    TableHelper.actionImage(
+                                        systemName: "folder.fill"
+                                    )
+                                }
+                            )
+                            .buttonStyle(
+                                CustomButtonStyle(
+                                    backgroundShape: .circle,
+                                    backgroundColor: .blue
+                                )
+                            )
+
+                            Button(
+                                action: {
+                                    self.createContainerForImage = image
+                                },
+                                label: {
+                                    TableHelper.actionImage(
+                                        systemName: "cube.fill"
+                                    )
+                                }
+                            )
+                            .buttonStyle(
+                                CustomButtonStyle(
+                                    backgroundShape: .circle,
+                                    backgroundColor: .blue
+                                )
+                            )
+
+                            Divider()
+                                .padding(.vertical, 12)
+
+                            Button(
+                                action: {
+                                    Task {
+                                        self.applicationManager
+                                            .showProgressView = true
+                                        do {
+                                            try await ImageService.deleteImages(
+                                                [image.image],
+                                                messageStreamContinuation:
+                                                    applicationManager
+                                                    .messageStreamContinuation
+                                            )
+
+                                            await self.listImages()
+                                            self.applicationManager
+                                                .showProgressView = false
+                                        } catch (let error) {
+                                            applicationManager.error = error
+                                        }
+                                    }
+                                },
+                                label: {
+                                    TableHelper.actionImage(
+                                        systemName: "trash.fill"
+                                    )
+                                }
+                            )
+                            .disabled(image.inUse)
+                            .buttonStyle(
+                                CustomButtonStyle(
+                                    backgroundShape: .circle,
+                                    backgroundColor: .red,
+                                    disabled: image.inUse
+                                )
+                            )
+
+                        }
+                        .padding(.horizontal, 8)
+                    }
+                    .width(128)
+
+                },
+                rows: {
+                    ForEach(filteredImages)
+                }
+            )
             .alternatingRowBackgrounds(.disabled)
-            .overlay(alignment: .center, content: {
-                if !self.applicationManager.isSystemRunning {
-                    SystemStoppedView()
-                } else if filteredImages.isEmpty {
-                    ContentUnavailableView(trimmedText.isEmpty ? "No Images Found" : "No Matching Images", systemImage: DisplayCategory.image.icon)
+            .overlay(
+                alignment: .center,
+                content: {
+                    if !self.applicationManager.isSystemRunning {
+                        SystemStoppedView()
+                    } else if filteredImages.isEmpty {
+                        ContentUnavailableView(
+                            trimmedText.isEmpty
+                                ? "No Images Found" : "No Matching Images",
+                            systemImage: DisplayCategory.image.icon
+                        )
+                    }
                 }
-            })
-            
+            )
+
         }
-        .onChange(of: self.applicationManager.isSystemRunning, initial: true, {
-            guard self.applicationManager.isSystemRunning else {
-                self.images = []
-                self.lastUpdated = nil
-                return
-            }
-            Task {
-                guard self.lastUpdated == nil else {
+        .onChange(
+            of: self.applicationManager.isSystemRunning,
+            initial: true,
+            {
+                guard self.applicationManager.isSystemRunning else {
+                    self.images = []
+                    self.lastUpdated = nil
                     return
                 }
-                await self.listImages()
-            }
-        })
-        .sheet(item: $createContainerForImage, onDismiss: {
-            Task {
-                await self.listImages()
-            }
-        }, content: { image in
-            CreateContainerView(imageReference: image.image.reference)
-        })
-        .sheet(isPresented: $showPullRemoteView, onDismiss: {
-            Task {
-                await self.listImages()
-            }
-        },  content: {
-            AddRemoteImageView()
-        })
-        .sheet(isPresented: $showBuildImageView, onDismiss: {
-            Task {
-                await self.listImages()
-            }
-        },  content: {
-            BuildImageView()
-        })
-        .sheet(isPresented: $showLoadImageView, onDismiss: {
-            Task {
-                await self.listImages()
-            }
-        }, content: {
-            LoadImageView()
-        })
-        .sheet(item: $showInUseContainerForImage, onDismiss: {
-            Task {
-                await self.listImages()
-            }
-        }, content: { image in
-            
-            InUseContainersView(containers: image.inUseContainers.map({ContainerDisplayModel($0)}), updateContainer: { id in
-                
-                let container = try await ContainerService.getContainer(id)
-                guard let index = self.showInUseContainerForImage?.inUseContainers.firstIndex(where: {$0.id == id }) else {
-                    return
+                Task {
+                    guard self.lastUpdated == nil else {
+                        return
+                    }
+                    await self.listImages()
                 }
-                self.showInUseContainerForImage?.inUseContainers[index] = container
+            }
+        )
+        .sheet(
+            item: $createContainerForImage,
+            onDismiss: {
+                Task {
+                    await self.listImages()
+                }
+            },
+            content: { image in
+                CreateContainerView(imageReference: image.image.reference)
+            }
+        )
+        .sheet(
+            isPresented: $showPullRemoteView,
+            onDismiss: {
+                Task {
+                    await self.listImages()
+                }
+            },
+            content: {
+                AddRemoteImageView()
+            }
+        )
+        .sheet(
+            isPresented: $showBuildImageView,
+            onDismiss: {
+                Task {
+                    await self.listImages()
+                }
+            },
+            content: {
+                BuildImageView()
+            }
+        )
+        .sheet(
+            isPresented: $showLoadImageView,
+            onDismiss: {
+                Task {
+                    await self.listImages()
+                }
+            },
+            content: {
+                LoadImageView()
+            }
+        )
+        .sheet(
+            item: $showInUseContainerForImage,
+            onDismiss: {
+                Task {
+                    await self.listImages()
+                }
+            },
+            content: { image in
 
-            }, deleteContainer: { id in
-                self.showInUseContainerForImage?.inUseContainers.removeAll(where: {$0.id == id})
-            })
+                InUseContainersView(
+                    containers: image.inUseContainers.map({
+                        ContainerDisplayModel($0)
+                    }),
+                    updateContainer: { id in
 
-        })
-        .sheet(isPresented: $showSaveImageView, onDismiss: {
-            self.imagesToSave = ""
-        }, content: {
-            SaveImageView(images: self.images.map(\.image), imageReferences: $imagesToSave)
-        })
-        
+                        let container = try await ContainerService.getContainer(
+                            id
+                        )
+                        guard
+                            let index = self.showInUseContainerForImage?
+                                .inUseContainers.firstIndex(where: {
+                                    $0.id == id
+                                })
+                        else {
+                            return
+                        }
+                        self.showInUseContainerForImage?.inUseContainers[
+                            index
+                        ] = container
+
+                    },
+                    deleteContainer: { id in
+                        self.showInUseContainerForImage?.inUseContainers
+                            .removeAll(where: { $0.id == id })
+                    }
+                )
+
+            }
+        )
+        .sheet(
+            isPresented: $showSaveImageView,
+            onDismiss: {
+                self.imagesToSave = ""
+            },
+            content: {
+                SaveImageView(
+                    images: self.images.map(\.image),
+                    imageReferences: $imagesToSave
+                )
+            }
+        )
+
     }
 
-        
     private func listImages() async {
         do {
             let containers = try await ContainerService.listContainers()
             let images = try await ImageService.listImages()
             var displayModels: [ImageDisplayModel] = []
             var failed: [(String, Error)] = []
-            try await withThrowingTaskGroup(of: (ImageDisplayModel?, (String, Error)?).self) { group in
+            try await withThrowingTaskGroup(
+                of: (ImageDisplayModel?, (String, Error)?).self
+            ) { group in
                 for image in images {
                     group.addTask {
                         do {
-                            let displayModel = try await ImageDisplayModel(image, containers: containers)
+                            let displayModel = try await ImageDisplayModel(
+                                image,
+                                containers: containers
+                            )
                             return (displayModel, nil)
-                        } catch(let error) {
+                        } catch (let error) {
                             return (nil, (image.reference, error))
                         }
                     }
@@ -378,10 +528,11 @@ struct ImageListView: View {
             if !failed.isEmpty {
                 throw ContainerizationError(
                     .internalError,
-                    message: "Failed to process one or more images: \n\(failed.map({"\($0.0): \($0.1)"}).joined(separator: "\n"))"
+                    message:
+                        "Failed to process one or more images: \n\(failed.map({"\($0.0): \($0.1)"}).joined(separator: "\n"))"
                 )
             }
-        } catch(let error) {
+        } catch (let error) {
             applicationManager.error = error
         }
     }

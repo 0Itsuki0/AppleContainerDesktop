@@ -5,11 +5,11 @@
 //  Created by Itsuki on 2025/09/07.
 //
 
-import Foundation
-
-import ContainerClient
+import ContainerAPIClient
+import ContainerCommands
+import ContainerResource
 internal import ContainerizationOCI
-
+import Foundation
 
 struct ImageDisplayModel: Identifiable {
 
@@ -22,25 +22,30 @@ struct ImageDisplayModel: Identifiable {
     var size: String
     var created: String
     var manifestDigest: String
-    
-    var inUseContainers: [ClientContainer]
+
+    var inUseContainers: [ContainerSnapshot]
     var inUse: Bool {
         return !inUseContainers.isEmpty
     }
-    
+
     var image: ClientImage
-    
+
     var id: String {
         return indexDigest + manifestDigest + created
     }
-    
-    init?(_ image: ClientImage, containers: [ClientContainer]) async throws {
+
+    init?(_ image: ClientImage, containers: [ContainerSnapshot]) async throws {
         let imageDigest = try await image.resolved().digest
-        
+        let containerSystemConfig =
+            try await Application.loadContainerSystemConfig()
+
         for descriptor in try await image.index().manifests {
             // Don't list attestation manifests
-            if let referenceType = descriptor.annotations?["vnd.docker.reference.type"],
-                referenceType == "attestation-manifest" {
+            if let referenceType = descriptor.annotations?[
+                "vnd.docker.reference.type"
+            ],
+                referenceType == "attestation-manifest"
+            {
                 continue
             }
 
@@ -60,12 +65,21 @@ struct ImageDisplayModel: Identifiable {
             }
 
             let created = config.created ?? ""
-            let size = descriptor.size + manifest.config.size + manifest.layers.reduce(0, { (l, r) in l + r.size })
-            let formattedSize = Formatter.byteCountFormatter.string(fromByteCount: size)
+            let size =
+                descriptor.size + manifest.config.size
+                + manifest.layers.reduce(0, { (l, r) in l + r.size })
+            let formattedSize = Formatter.byteCountFormatter.string(
+                fromByteCount: size
+            )
 
-            let processedReferenceString = try ClientImage.denormalizeReference(image.reference)
-            let reference = try ContainerizationOCI.Reference.parse(processedReferenceString)
-            
+            let processedReferenceString = try ClientImage.denormalizeReference(
+                image.reference,
+                containerSystemConfig: containerSystemConfig
+            )
+            let reference = try ContainerizationOCI.Reference.parse(
+                processedReferenceString
+            )
+
             self.name = reference.name
             self.tag = reference.tag ?? "<none>"
             self.indexDigest = imageDigest
@@ -76,16 +90,12 @@ struct ImageDisplayModel: Identifiable {
             self.size = formattedSize
             self.manifestDigest = descriptor.digest
             self.image = image
-            self.inUseContainers = containers.filter({$0.configuration.image.digest == image.description.digest})
-            
+            self.inUseContainers = containers.filter({
+                $0.configuration.image.digest == image.description.digest
+            })
+
             return
         }
-        
         return nil
-        
     }
-    
 }
-
-
-

@@ -7,7 +7,7 @@
 
 
 import SwiftUI
-import ContainerClient
+import ContainerResource
 
 struct VolumeListView: View {
     @Environment(ApplicationManager.self) private var applicationManager

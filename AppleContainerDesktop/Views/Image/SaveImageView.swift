@@ -8,7 +8,7 @@
 
 import SwiftUI
 internal import ContainerizationOCI
-import ContainerClient
+import ContainerAPIClient
 import UniformTypeIdentifiers
 
 struct SaveImageView: View {

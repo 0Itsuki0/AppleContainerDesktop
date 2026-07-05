@@ -120,7 +120,7 @@ class ApplicationManager {
         self.messageTask = nil
         
         Task {
-            try await SystemService.stopSystem(
+            try? await SystemService.stopSystem(
                 stopContainerTimeoutSeconds: UserSettingsManager.defaultStopContainerTimeoutSeconds,
                 shutdownTimeoutSeconds: UserSettingsManager.defaultShutdownSystemTimeoutSeconds,
                 messageStreamContinuation: nil

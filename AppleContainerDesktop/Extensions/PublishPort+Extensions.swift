@@ -5,8 +5,9 @@
 //  Created by Itsuki on 2025/09/09.
 //
 
-import ContainerClient
+
 import Foundation
+import ContainerResource
 
 extension PublishPort {
     var displayString: String {

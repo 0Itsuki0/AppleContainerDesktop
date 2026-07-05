@@ -7,9 +7,10 @@
 
 import Foundation
 
-import ContainerClient
 import ContainerizationError
 internal import ContainerizationOCI
+import ContainerAPIClient
+
 
 extension ClientImage {
     func resolved() async throws -> Descriptor {

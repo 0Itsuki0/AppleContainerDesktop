@@ -7,11 +7,12 @@
 
 
 import SwiftUI
-import ContainerClient
+
 internal import ContainerizationOCI
+import ContainerResource
 
 struct VolumePickingView: View {
-    var volumes: [Volume]
+    var volumes: [VolumeConfiguration]
     var onVolumeSelect: (String) -> Void
     
     @SwiftUI.State private var searchText: String = ""
@@ -22,7 +23,7 @@ struct VolumePickingView: View {
         self.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    private var filteredImages: [Volume] {
+    private var filteredVolumes: [VolumeConfiguration] {
         if trimmedText.isEmpty {
             return volumes
         }
@@ -38,7 +39,7 @@ struct VolumePickingView: View {
             SearchBox(text: $searchText)
             
             List {
-                ForEach(filteredImages, id: \.id) { image in
+                ForEach(filteredVolumes, id: \.id) { image in
                     Button(action: {
                         self.onVolumeSelect(image.name)
                         self.dismiss()

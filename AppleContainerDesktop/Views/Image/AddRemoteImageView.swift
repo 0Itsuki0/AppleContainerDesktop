@@ -7,7 +7,13 @@
 
 import SwiftUI
 internal import ContainerizationOCI
-import ContainerClient
+import ContainerAPIService
+import ContainerResource
+import ContainerAPIClient
+import ContainerPersistence
+import ContainerPlugin
+import Containerization
+
 
 struct AddRemoteImageView: View {
     @Environment(ApplicationManager.self) private var applicationManager

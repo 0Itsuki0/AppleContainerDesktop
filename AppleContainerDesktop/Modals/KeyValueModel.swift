@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import ContainerClient
+import ContainerResource
 
 nonisolated
 struct KeyValueModel: Identifiable {
@@ -15,15 +15,15 @@ struct KeyValueModel: Identifiable {
     var value: String = ""
     
     var stringRepresentation: String {
-        return Utility.keyValueString(key: self.key.trimmingCharacters(in: .whitespacesAndNewlines), value: self.value)
+        return AdditionalUtility.keyValueString(key: self.key.trimmingCharacters(in: .whitespacesAndNewlines), value: self.value)
     }
     
-    static func fromContainerEnv(_ container: ClientContainer) -> [KeyValueModel] {
+    static func fromContainerEnv(_ container: ContainerSnapshot) -> [KeyValueModel] {
         let environments = container.configuration.initProcess.environment
         return environments.map({Self.fromString($0)}).filter({$0 != nil}).map({$0!})
     }
     
-    static func fromContainerPorts(_ container: ClientContainer) -> [KeyValueModel] {
+    static func fromContainerPorts(_ container: ContainerSnapshot) -> [KeyValueModel] {
         let ports = container.configuration.publishedPorts
         return ports.map({ port in
             let host = "\(port.hostAddress):\(port.hostPort)"

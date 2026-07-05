@@ -5,9 +5,11 @@
 //  Created by Itsuki on 2025/09/08.
 //
 
-import ContainerClient
-internal import ContainerizationOCI
 
+internal import ContainerizationOCI
+import ContainerResource
+
+nonisolated
 extension ImageDescription {
     var name: String {
         guard let annotations = self.descriptor.annotations else {

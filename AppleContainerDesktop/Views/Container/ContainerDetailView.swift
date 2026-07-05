@@ -6,7 +6,8 @@
 //
 
 import SwiftUI
-import ContainerClient
+import ContainerResource
+
 
 
 struct ContainerDetailView: View {
@@ -64,7 +65,7 @@ struct ContainerDetailView: View {
                                     Task {
                                         self.applicationManager.showProgressView = true
                                         do {
-                                            try await ContainerService.stopContainers(containers: [container.container], stopTimeoutSeconds: userSettingsManager.stopContainerTimeoutSeconds, messageStreamContinuation: applicationManager.messageStreamContinuation)
+                                            try await ContainerService.stopContainers( [container.container.id], stopTimeoutSeconds: userSettingsManager.stopContainerTimeoutSeconds, messageStreamContinuation: applicationManager.messageStreamContinuation)
                                             
                                             await self.getContainerInfo()
                                             self.applicationManager.showProgressView = false

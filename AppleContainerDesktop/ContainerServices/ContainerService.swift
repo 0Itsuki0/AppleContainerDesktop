@@ -5,18 +5,18 @@
 //  Created by Itsuki on 2025/09/07.
 //
 
-
-import Foundation
-
-import ContainerClient
+import ArgumentParser
+import ContainerAPIClient
+import ContainerCommands
+import ContainerPersistence
+import ContainerResource
 import ContainerizationError
 internal import ContainerizationOCI
 import ContainerizationOS
-import ArgumentParser
-
+import Foundation
 
 class ContainerService {
-    
+
     static func createContainer(
         imageReference: String,
         arguments: [KeyValueModel],
@@ -26,29 +26,40 @@ class ContainerService {
         registryScheme: String = RequestScheme.auto.rawValue,
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws {
+        let containerSystemConfig: ContainerSystemConfig =
+            try await Application.loadContainerSystemConfig()
 
-        let id = Utility.createContainerID(name: management.name)
-        try Utility.validEntityName(id)
+        let id = AdditionalUtility.createContainerID(name: management.name)
+        try AdditionalUtility.validEntityName(id)
 
         messageStreamContinuation?.yield("Creating Container: \(id)...")
 
-        let (configuration, kernel) = try await Utility.createContainerConfig(
-            imageReference: imageReference,
-            arguments: arguments.stringArray,
-            process: process,
-            management: management,
-            resource: resource,
-            registryScheme: registryScheme,
-            messageStreamContinuation: messageStreamContinuation
-
-        )
+        let (configuration, kernel, initImage) =
+            try await AdditionalUtility.createContainerConfig(
+                id: id,
+                imageReference: imageReference,
+                arguments: arguments.stringArray,
+                process: process,
+                management: management,
+                resource: resource,
+                registryScheme: registryScheme,
+                containerSystemConfig: containerSystemConfig,
+                messageStreamContinuation: messageStreamContinuation
+            )
 
         let options = ContainerCreateOptions(autoRemove: management.remove)
-        let container = try await ClientContainer.create(configuration: configuration, options: options, kernel: kernel)
+        //        let container = try await ClientContainer.create(configuration: configuration, options: options, kernel: kernel)
+        let client = ContainerClient()
+        try await client.create(
+            configuration: configuration,
+            options: options,
+            kernel: kernel,
+            initImage: initImage
+        )
 
         if !management.cidfile.isEmpty {
             let path = management.cidfile
-            let data = container.id.data(using: .utf8)
+            let data = id.data(using: .utf8)
             var attributes = [FileAttributeKey: Any]()
             attributes[.posixPermissions] = 0o644
             let success = FileManager.default.createFile(
@@ -58,23 +69,54 @@ class ContainerService {
             )
             guard success else {
                 throw ContainerizationError(
-                    .internalError, message: "failed to create cid file at \(path): \(errno)")
+                    .internalError,
+                    message: "failed to create cid file at \(path): \(errno)"
+                )
             }
         }
 
-        messageStreamContinuation?.yield("Container created: \(container.id)")
+        messageStreamContinuation?.yield("Container created: \(id)")
     }
-   
-        
-    // attachContainerStdIn: true for interactive
-    static func startContainer(_ container: ClientContainer, attachContainerStdout: Bool, attachContainerStdIn: Bool, messageStreamContinuation: AsyncStream<String>.Continuation?) async throws {
 
-        messageStreamContinuation?.yield("Starting Container: \(container.id)...")
+    // attachContainerStdIn: true for interactive
+    static func startContainer(
+        _ container: ContainerSnapshot,
+        attachContainerStdout: Bool,
+        attachContainerStdIn: Bool,
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        let client = ContainerClient()
+
+        messageStreamContinuation?.yield(
+            "Starting Container: \(container.id)..."
+        )
 
         var exitCode: Int32 = 127
 
+        let detach = !attachContainerStdout && !attachContainerStdIn
+        if container.status == .running {
+            if !detach {
+                throw ContainerizationError(
+                    .invalidArgument,
+                    message:
+                        "attach is currently unsupported on already running containers"
+                )
+            }
+            return
+        }
+
+        for mount in container.configuration.mounts where mount.isVirtiofs {
+            if !FileManager.default.fileExists(atPath: mount.source) {
+                throw ContainerizationError(
+                    .invalidState,
+                    message:
+                        "mount source path '\(mount.source)' does not exist"
+                )
+            }
+        }
+
         do {
-            let detach = !attachContainerStdout && !attachContainerStdIn
+
             messageStreamContinuation?.yield("Initializing Process...")
             let io = try ProcessIO.create(
                 tty: container.configuration.initProcess.terminal,
@@ -86,46 +128,67 @@ class ContainerService {
             }
 
             messageStreamContinuation?.yield("Bootstrapping container...")
-            let process = try await container.bootstrap(stdio: io.stdio)
+            var env: [String: String] = [:]
+            if let sshAuthSock = ProcessInfo.processInfo.environment[
+                "SSH_AUTH_SOCK"
+            ] {
+                env["SSH_AUTH_SOCK"] = sshAuthSock
+            }
+
+            let process = try await client.bootstrap(
+                id: container.id,
+                stdio: io.stdio,
+                dynamicEnv: env
+            )
 
             if detach {
-
                 try await process.start()
                 messageStreamContinuation?.yield("Process started...")
                 try io.closeAfterStart()
                 return
             }
 
-            exitCode = try await io.handleProcess(process: process, log: ApplicationManager.logger)
-        } catch(let error) {
-            try? await container.stop()
+            exitCode = try await io.handleProcess(
+                process: process,
+                log: ApplicationManager.logger
+            )
+        } catch (let error) {
+            try? await client.stop(id: container.id)
 
             if error is ContainerizationError {
                 throw error
             }
-            
-            throw ContainerizationError(.internalError, message: "failed to start container: \(error)")
+
+            throw ContainerizationError(
+                .internalError,
+                message: "failed to start container: \(error)"
+            )
         }
         throw ArgumentParser.ExitCode(exitCode)
     }
 
-    
-    static func listContainers() async throws -> [ClientContainer] {
-        let containers = try await ClientContainer.list()
+    static func listContainers() async throws -> [ContainerSnapshot] {
+        let client = ContainerClient()
+        let filters = ContainerListFilters(status: nil).withoutMachines()
+        let containers = try await client.list(filters: filters)
         return containers
     }
-    
-    static func getContainer(_ id: ClientContainerID) async throws -> ClientContainer {
-        let container = try await ClientContainer.get(id: id)
+
+    static func getContainer(_ id: ClientContainerID) async throws
+        -> ContainerSnapshot
+    {
+        let client = ContainerClient()
+        let container = try await client.get(id: id)
         return container
     }
-    
-    
+
     // boot: Boot log if true, otherwise, stdio
-    static func getContainerLog(_ id: ClientContainerID, boot: Bool) async throws -> String {
-        let container = try await self.getContainer(id)
-        let fileHandles = try await container.logs()
-        
+    static func getContainerLog(_ id: ClientContainerID, boot: Bool)
+        async throws -> String
+    {
+        let client = ContainerClient()
+        let fileHandles = try await client.logs(id: id)
+
         let fileHandle = boot ? fileHandles[1] : fileHandles[0]
 
         // Fast path if all they want is the full file.
@@ -141,19 +204,21 @@ class ContainerService {
 
         return logs.trimmingCharacters(in: .newlines)
     }
-    
-    
+
     static func stopContainers(
-        containers: [ClientContainer],
+        _ containers: [String],
         stopTimeoutSeconds: Int32,
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws {
-        messageStreamContinuation?.yield("Stopping \(containers.count) Container(s)...")
+        let client = ContainerClient()
 
-        let signal = try Signals.parseSignal("SIGTERM")
+        messageStreamContinuation?.yield(
+            "Stopping \(containers.count) Container(s)..."
+        )
+
         let stopOptions = ContainerStopOptions(
             timeoutInSeconds: stopTimeoutSeconds,
-            signal: signal
+            signal: "SIGTERM"
         )
 
         var failed: [(String, Error)] = []
@@ -161,12 +226,16 @@ class ContainerService {
             for container in containers {
                 group.addTask {
                     do {
-                        try await container.stop(opts: stopOptions)
-                        messageStreamContinuation?.yield("Stopped container: \(container.id)")
+                        try await client.stop(id: container, opts: stopOptions)
+                        messageStreamContinuation?.yield(
+                            "Stopped container: \(container)"
+                        )
                         return nil
-                    } catch(let error) {
-                        messageStreamContinuation?.yield("failed to stop container \(container.id): \(error)")
-                        return (container.id, error)
+                    } catch (let error) {
+                        messageStreamContinuation?.yield(
+                            "failed to stop container \(container): \(error)"
+                        )
+                        return (container, error)
                     }
                 }
             }
@@ -182,15 +251,23 @@ class ContainerService {
         if !failed.isEmpty {
             throw ContainerizationError(
                 .internalError,
-                message: "Failed to stop one or more containers: \n\(failed.map({"\($0.0): \($0.1)"}).joined(separator: "\n"))"
+                message:
+                    "Failed to stop one or more containers: \n\(failed.map({"\($0.0): \($0.1)"}).joined(separator: "\n"))"
             )
         }
 
     }
-    
-    static func deleteContainers(_ containers: [ClientContainer], force: Bool, messageStreamContinuation: AsyncStream<String>.Continuation?) async throws {
 
-        messageStreamContinuation?.yield("Deleting \(containers.count) Container(s)...")
+    static func deleteContainers(
+        _ containers: [ContainerSnapshot],
+        force: Bool,
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        let client = ContainerClient()
+
+        messageStreamContinuation?.yield(
+            "Deleting \(containers.count) Container(s)..."
+        )
 
         var failed: [(String, Error)] = []
         try await withThrowingTaskGroup(of: (String, Error)?.self) { group in
@@ -198,14 +275,21 @@ class ContainerService {
                 group.addTask {
                     do {
                         if container.status == .running && !force {
-                            throw ContainerizationError(.invalidState, message: "container: \(container.id) is running")
+                            throw ContainerizationError(
+                                .invalidState,
+                                message: "container: \(container.id) is running"
+                            )
                         }
 
-                        try await container.delete(force: force)
-                        messageStreamContinuation?.yield("Container deleted: \(container.id)")
+                        try await client.delete(id: container.id, force: force)
+                        messageStreamContinuation?.yield(
+                            "Container deleted: \(container.id)"
+                        )
                         return nil
-                    } catch(let error) {
-                        messageStreamContinuation?.yield("failed to delete container \(container.id): \(error)")
+                    } catch (let error) {
+                        messageStreamContinuation?.yield(
+                            "failed to delete container \(container.id): \(error)"
+                        )
                         return (container.id, error)
                     }
                 }
@@ -222,10 +306,10 @@ class ContainerService {
         if failed.count > 0 {
             throw ContainerizationError(
                 .internalError,
-                message: "Failed to delete one or more containers: \n\(failed.map({"\($0.0): \($0.1)"}).joined(separator: "\n"))"
+                message:
+                    "Failed to delete one or more containers: \n\(failed.map({"\($0.0): \($0.1)"}).joined(separator: "\n"))"
 
             )
         }
     }
-
 }
