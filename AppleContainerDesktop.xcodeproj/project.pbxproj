@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		980514462FFA440500954B5B /* ContainerAPIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3592FF9F66C0044EC75 /* ContainerAPIClient */; };
 		980514482FFA440500954B5B /* MachineAPIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA37D2FF9F66C0044EC75 /* MachineAPIClient */; };
+		981C1E0F2FFB3D670070E6E4 /* ContainerNetworkServer in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3672FF9F66C0044EC75 /* ContainerNetworkServer */; };
 		98AFA35C2FF9F66C0044EC75 /* ContainerAPIService in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA35B2FF9F66C0044EC75 /* ContainerAPIService */; };
 		98AFA35E2FF9F66C0044EC75 /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA35D2FF9F66C0044EC75 /* ContainerBuild */; };
 		98AFA3602FF9F66C0044EC75 /* ContainerCommands in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA35F2FF9F66C0044EC75 /* ContainerCommands */; };
@@ -91,6 +92,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				981C1E0F2FFB3D670070E6E4 /* ContainerNetworkServer in Frameworks */,
 				980514482FFA440500954B5B /* MachineAPIClient in Frameworks */,
 				980514462FFA440500954B5B /* ContainerAPIClient in Frameworks */,
 				98EB54352E8CEBB700AC749B /* SocketForwarder in Frameworks */,
@@ -203,26 +205,20 @@
 			name = AppleContainerDesktop;
 			packageProductDependencies = (
 				98F2D4C82E6BF5A300633147 /* ContainerBuild */,
-				98F2D4D62E6BF5A300633147 /* ContainerClient */,
 				98F2D4D82E6BF5A300633147 /* ContainerImagesService */,
 				98F2D4DA2E6BF5A300633147 /* ContainerLog */,
-				98F2D4DC2E6BF5A300633147 /* ContainerNetworkService */,
 				98F2D4DE2E6BF5A300633147 /* ContainerPersistence */,
 				98F2D4E02E6BF5A300633147 /* ContainerPlugin */,
-				98F2D4E22E6BF5A300633147 /* ContainerSandboxService */,
 				98F2D4E42E6BF5A300633147 /* ContainerVersion */,
 				98F2D4E62E6BF5A300633147 /* ContainerXPC */,
 				98F2D4E82E6BF5A300633147 /* SocketForwarder */,
 				98EB540B2E8CD3A900AC749B /* ContainerAPIService */,
 				98EB540D2E8CD3A900AC749B /* ContainerBuild */,
-				98EB540F2E8CD3A900AC749B /* ContainerClient */,
 				98EB54112E8CD3A900AC749B /* ContainerCommands */,
 				98EB54132E8CD3A900AC749B /* ContainerImagesService */,
 				98EB54152E8CD3A900AC749B /* ContainerLog */,
-				98EB54172E8CD3A900AC749B /* ContainerNetworkService */,
 				98EB54192E8CD3A900AC749B /* ContainerPersistence */,
 				98EB541B2E8CD3A900AC749B /* ContainerPlugin */,
-				98EB541D2E8CD3A900AC749B /* ContainerSandboxService */,
 				98EB541F2E8CD3A900AC749B /* ContainerVersion */,
 				98EB54212E8CD3A900AC749B /* ContainerXPC */,
 				98EB54232E8CD3A900AC749B /* SocketForwarder */,
@@ -768,10 +764,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerBuild;
 		};
-		98EB540F2E8CD3A900AC749B /* ContainerClient */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ContainerClient;
-		};
 		98EB54112E8CD3A900AC749B /* ContainerCommands */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerCommands;
@@ -784,10 +776,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerLog;
 		};
-		98EB54172E8CD3A900AC749B /* ContainerNetworkService */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ContainerNetworkService;
-		};
 		98EB54192E8CD3A900AC749B /* ContainerPersistence */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerPersistence;
@@ -795,10 +783,6 @@
 		98EB541B2E8CD3A900AC749B /* ContainerPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerPlugin;
-		};
-		98EB541D2E8CD3A900AC749B /* ContainerSandboxService */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ContainerSandboxService;
 		};
 		98EB541F2E8CD3A900AC749B /* ContainerVersion */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -816,10 +800,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerBuild;
 		};
-		98F2D4D62E6BF5A300633147 /* ContainerClient */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ContainerClient;
-		};
 		98F2D4D82E6BF5A300633147 /* ContainerImagesService */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerImagesService;
@@ -828,10 +808,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerLog;
 		};
-		98F2D4DC2E6BF5A300633147 /* ContainerNetworkService */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ContainerNetworkService;
-		};
 		98F2D4DE2E6BF5A300633147 /* ContainerPersistence */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerPersistence;
@@ -839,10 +815,6 @@
 		98F2D4E02E6BF5A300633147 /* ContainerPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContainerPlugin;
-		};
-		98F2D4E22E6BF5A300633147 /* ContainerSandboxService */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ContainerSandboxService;
 		};
 		98F2D4E42E6BF5A300633147 /* ContainerVersion */ = {
 			isa = XCSwiftPackageProductDependency;
