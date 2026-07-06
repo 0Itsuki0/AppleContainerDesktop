@@ -19,122 +19,153 @@ struct AppMenu: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            
-            Text(applicationManager.isSystemRunning ? "🟢 Apple Container is running." : "🔴 Apple Container is stopped.")
-                .foregroundStyle(.secondary)
 
-            
-            Divider()
-                .foregroundStyle(.primary)
-                .padding(.vertical, 4)
-            
-            Button(action: {
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                self.openWindow(id: AppleContainerDesktopApp.dashboardWindowId)
-            }, label: {
-                Label("Dashboard", systemImage: "cube.fill")
-            })
-            
-            Button(action: {
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                openSettings()
-            }, label: {
-                Label("Settings", systemImage: "gearshape.fill")
-            })
-            
+            Text(
+                applicationManager.isSystemRunning
+                    ? "🟢 Apple Container is running."
+                    : "🔴 Apple Container is stopped."
+            )
+            .foregroundStyle(.secondary)
+
             Divider()
                 .foregroundStyle(.primary)
                 .padding(.vertical, 4)
 
-            
-            Button(action: {
-                Task {
-                    self.startingSystem = true
-
-                    do {
-                        try await SystemService.startSystem(
-                            appDataRootUrl: self.userSettingsManager.appRootUrl,
-                            executablePathUrl: self.userSettingsManager.executablePathUrl,
-                            timeoutSeconds: self.userSettingsManager.startSystemTimeoutSeconds,
-                            messageStreamContinuation: nil
-                        )
-                        self.applicationManager.isSystemRunning = true
-
-                    } catch(let error) {
-                        self.openWindow(id: AppleContainerDesktopApp.dashboardWindowId)
-                        self.applicationManager.error = error
-                    }
-                    
-                    self.startingSystem = false
+            Button(
+                action: {
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                    self.openWindow(
+                        id: AppleContainerDesktopApp.dashboardWindowId
+                    )
+                },
+                label: {
+                    Label("Dashboard", systemImage: "cube.fill")
                 }
-            }, label: {
-                HStack {
-                    Label("Start Container", systemImage: "play.fill")
-                    if self.startingSystem {
-                        ProgressView()
-                            .controlSize(.mini)
-                    }
+            )
 
-
+            Button(
+                action: {
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                    openSettings()
+                },
+                label: {
+                    Label("Settings", systemImage: "gearshape.fill")
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            })
+            )
+
+            Divider()
+                .foregroundStyle(.primary)
+                .padding(.vertical, 4)
+
+            Button(
+                action: {
+                    Task {
+                        self.startingSystem = true
+
+                        do {
+                            try await SystemService.startSystem(
+                                appDataRootUrl: self.userSettingsManager
+                                    .appRootUrl,
+                                executablePathUrl: self.userSettingsManager
+                                    .executablePathUrl,
+                                timeoutSeconds: self.userSettingsManager
+                                    .startSystemTimeoutSeconds,
+                                messageStreamContinuation: nil
+                            )
+                            self.applicationManager.isSystemRunning = true
+
+                        } catch (let error) {
+                            self.openWindow(
+                                id: AppleContainerDesktopApp.dashboardWindowId
+                            )
+                            self.applicationManager.error = error
+                        }
+
+                        self.startingSystem = false
+                    }
+                },
+                label: {
+                    HStack {
+                        Label("Start Container", systemImage: "play.fill")
+                        if self.startingSystem {
+                            ProgressView()
+                                .controlSize(.mini)
+                        }
+
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            )
             .disabled(self.startingSystem || self.stoppingSystem)
 
-            Button(action: {
-                Task {
-                    self.stoppingSystem = true
+            Button(
+                action: {
+                    Task {
+                        self.stoppingSystem = true
 
-                    do {
+                        do {
 
-                        try await SystemService.stopSystem(
-                            stopContainerTimeoutSeconds: self.userSettingsManager.stopContainerTimeoutSeconds,
-                            shutdownTimeoutSeconds: self.userSettingsManager.shutdownSystemTimeoutSeconds,
-                            messageStreamContinuation: nil)
-                        
-                        self.applicationManager.isSystemRunning = false
+                            try await SystemService.stopSystem(
+                                stopContainerTimeoutSeconds: self
+                                    .userSettingsManager
+                                    .stopContainerTimeoutSeconds,
+                                shutdownTimeoutSeconds: self.userSettingsManager
+                                    .shutdownSystemTimeoutSeconds,
+                                messageStreamContinuation: nil
+                            )
 
-                    } catch(let error) {
-                        self.openWindow(id: AppleContainerDesktopApp.dashboardWindowId)
-                        self.applicationManager.error = error
+                            self.applicationManager.isSystemRunning = false
+
+                        } catch (let error) {
+                            self.openWindow(
+                                id: AppleContainerDesktopApp.dashboardWindowId
+                            )
+                            self.applicationManager.error = error
+                        }
+
+                        self.stoppingSystem = false
                     }
-                    
-                    self.stoppingSystem = false
-                }
-            }, label: {
-                HStack {
-                    Label("Stop Container", systemImage: "stop.fill")
-                    if self.stoppingSystem {
-                        ProgressView()
-                            .controlSize(.mini)
+                },
+                label: {
+                    HStack {
+                        Label("Stop Container", systemImage: "stop.fill")
+                        if self.stoppingSystem {
+                            ProgressView()
+                                .controlSize(.mini)
+                        }
+
                     }
-
-
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            })
+            )
             .disabled(self.startingSystem || self.stoppingSystem)
 
-            
-            Button(action: {
-                Task {
-                    do {
-                        try await SystemService.stopSystem(
-                            stopContainerTimeoutSeconds: self.userSettingsManager.stopContainerTimeoutSeconds,
-                            shutdownTimeoutSeconds: self.userSettingsManager.shutdownSystemTimeoutSeconds,
-                            messageStreamContinuation: nil)
-                        self.applicationManager.isSystemRunning = false
-                    } catch(let error) {
-                        print(error)
+            Button(
+                action: {
+                    Task {
+                        do {
+                            try await SystemService.stopSystem(
+                                stopContainerTimeoutSeconds: self
+                                    .userSettingsManager
+                                    .stopContainerTimeoutSeconds,
+                                shutdownTimeoutSeconds: self.userSettingsManager
+                                    .shutdownSystemTimeoutSeconds,
+                                messageStreamContinuation: nil
+                            )
+                            self.applicationManager.isSystemRunning = false
+                        } catch (let error) {
+                            print(error)
+                        }
+
+                        NSApplication.shared.terminate(nil)
                     }
-                    
-                    NSApplication.shared.terminate(nil)
+
+                },
+                label: {
+                    Label("Terminate", systemImage: "power")
+
                 }
-
-            }, label: {
-                Label("Terminate", systemImage: "power")
-
-            })
+            )
             .disabled(self.startingSystem || self.stoppingSystem)
 
         }
@@ -144,5 +175,5 @@ struct AppMenu: View {
         .frame(width: 240)
 
     }
-    
+
 }

@@ -27,7 +27,7 @@ struct CustomButtonStyle: ButtonStyle {
             )
     }
     
-    @ViewBuilder func makeBackgroundView(isPressed: Bool) -> some View {
+    @ContentBuilder func makeBackgroundView(isPressed: Bool) -> some View {
         Group {
             switch backgroundShape {
             case .circle:

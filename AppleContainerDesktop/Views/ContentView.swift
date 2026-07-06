@@ -5,12 +5,10 @@
 //  Created by Itsuki on 2025/09/04.
 //
 
-
 import SwiftUI
 
-
 struct ContentView: View {
-    
+
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(UserSettingsManager.self) private var userSettingsManager
 
@@ -18,126 +16,192 @@ struct ContentView: View {
 
     @State private var showExecutableUnavailable = false
 
-    
     var body: some View {
         @Bindable var applicationManager = applicationManager
         Group {
-            NavigationSplitView(sidebar: {
-                VStack {
-                    ForEach(DisplayCategory.allCases) { category in
-                        Button(action: {
-                            applicationManager.selectedCategory = category
-                        }, label: {
-                            title(category.displayTitle, iconName: category.icon, selected: category == applicationManager.selectedCategory)
-                                .contentShape(Rectangle())
-                        })
-                    }
-                }
-                .padding()
-                .buttonStyle(.plain)
-                .navigationSplitViewColumnWidth(180)
-                .frame(maxHeight: .infinity, alignment: .topLeading)
-                .background(Color.gray.opacity(0.1))
-
-            }, detail: {
-                    
-                NavigationStack {
+            NavigationSplitView(
+                sidebar: {
                     VStack {
-                        switch applicationManager.selectedCategory {
-                        case .container:
-                            ContainerListView()
-                        case .image:
-                            ImageListView()
-                        case .volume:
-                            VolumeListView()
+                        ForEach(DisplayCategory.allCases) { category in
+                            Button(
+                                action: {
+                                    applicationManager.selectedCategory =
+                                        category
+                                },
+                                label: {
+                                    title(
+                                        category.displayTitle,
+                                        iconName: category.icon,
+                                        selected: category
+                                            == applicationManager
+                                            .selectedCategory
+                                    )
+                                    .contentShape(Rectangle())
+                                }
+                            )
                         }
                     }
-                    .environment(self.applicationManager)
-                    .environment(self.userSettingsManager)
                     .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .navigationDestination(item: $applicationManager.selectedContainerID, destination: { containerID in
-                        ContainerDetailView(containerID: containerID)
-                    })
+                    .buttonStyle(.plain)
+                    .navigationSplitViewColumnWidth(180)
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
+                    .background(Color.gray.opacity(0.1))
+
+                },
+                detail: {
+
+                    NavigationStack {
+                        VStack {
+                            switch applicationManager.selectedCategory {
+                            case .container:
+                                ContainerListView()
+                            case .image:
+                                ImageListView()
+                            case .volume:
+                                VolumeListView()
+                            }
+                        }
+                        .environment(self.applicationManager)
+                        .environment(self.userSettingsManager)
+                        .padding()
+                        .frame(
+                            maxWidth: .infinity,
+                            maxHeight: .infinity,
+                            alignment: .topLeading
+                        )
+                        .navigationDestination(
+                            item: $applicationManager.selectedContainerID,
+                            destination: { containerID in
+                                ContainerDetailView(containerID: containerID)
+                            }
+                        )
+
+                    }
 
                 }
-
-            })
+            )
             .toolbar(content: {
-                ToolbarItem(placement: .confirmationAction, content: {
-                    Menu(content: {
-                        Section {
-                            Button(action: {
-                                self.openSettings()
-                            }, label: {
-                                Label("Settings", systemImage: "gearshape.fill")
-                            })
-                        }
-                        
-                        Section {
-                            Button(action: {
-                                // not checking applicationManager.isSystemRunning incase it is started/stopped elsewhere.
-                                Task {
-                                    await self.startSystem()
+                ToolbarItem(
+                    placement: .confirmationAction,
+                    content: {
+                        Menu(
+                            content: {
+                                Section {
+                                    Button(
+                                        action: {
+                                            self.openSettings()
+                                        },
+                                        label: {
+                                            Label(
+                                                "Settings",
+                                                systemImage: "gearshape.fill"
+                                            )
+                                        }
+                                    )
                                 }
 
-                            }, label: {
-                                Label("Start System", systemImage: "play.fill")
-                            })
-                            
-                            Button(action: {
-                                // not checking applicationManager.isSystemRunning incase it is started/stopped elsewhere.
-                                Task {
-                                    await self.stopSystem()
-                                }
+                                Section {
+                                    Button(
+                                        action: {
+                                            // not checking applicationManager.isSystemRunning incase it is started/stopped elsewhere.
+                                            Task {
+                                                await self.startSystem()
+                                            }
 
-                            }, label: {
-                                Label("Stop System", systemImage: "stop.fill")
-                            })
-                        }
-                    }, label: {
-                        Image(systemName: "ellipsis")
-                    })
-                    .menuIndicator(.hidden)
-                })
+                                        },
+                                        label: {
+                                            Label(
+                                                "Start System",
+                                                systemImage: "play.fill"
+                                            )
+                                        }
+                                    )
+
+                                    Button(
+                                        action: {
+                                            // not checking applicationManager.isSystemRunning incase it is started/stopped elsewhere.
+                                            Task {
+                                                await self.stopSystem()
+                                            }
+
+                                        },
+                                        label: {
+                                            Label(
+                                                "Stop System",
+                                                systemImage: "stop.fill"
+                                            )
+                                        }
+                                    )
+                                }
+                            },
+                            label: {
+                                Image(systemName: "ellipsis")
+                            }
+                        )
+                        .menuIndicator(.hidden)
+                    }
+                )
 
             })
             .task {
                 guard !self.applicationManager.isSystemRunning else {
                     return
                 }
-                
+
                 await self.startSystem()
             }
-            .alert("Oops!", isPresented: $applicationManager.showError, actions: {
-                Button(action: {
-                    self.applicationManager.showError = false
-                }, label: {
-                    Text("OK")
-                })
-            }, message: {
-                let message = String("\(self.applicationManager.error, default: "Unknown Error")")
-                Text(message)
-                    .lineLimit(5)
-            })
-            .sheet(isPresented: $applicationManager.showProgressView, content: {
-                CustomProgressView()
-                    .environment(self.applicationManager)
-            })
-            .sheet(isPresented: $showExecutableUnavailable, content: {
-                ExecutableUnavailableView()
-                    .environment(self.applicationManager)
-                    .environment(self.userSettingsManager)
-            })
-            .onChange(of: self.userSettingsManager.executableExists, initial: true, {
-                self.showExecutableUnavailable = !self.userSettingsManager.executableExists
-            })
+            .alert(
+                "Oops!",
+                isPresented: $applicationManager.showError,
+                actions: {
+                    Button(
+                        action: {
+                            self.applicationManager.showError = false
+                        },
+                        label: {
+                            Text("OK")
+                        }
+                    )
+                },
+                message: {
+                    let message = String(
+                        "\(self.applicationManager.error, default: "Unknown Error")"
+                    )
+                    Text(message)
+                        .lineLimit(5)
+                }
+            )
+            .sheet(
+                isPresented: $applicationManager.showProgressView,
+                content: {
+                    CustomProgressView()
+                        .environment(self.applicationManager)
+                }
+            )
+            .sheet(
+                isPresented: $showExecutableUnavailable,
+                content: {
+                    ExecutableUnavailableView()
+                        .environment(self.applicationManager)
+                        .environment(self.userSettingsManager)
+                }
+            )
+            .onChange(
+                of: self.userSettingsManager.executableExists,
+                initial: true,
+                {
+                    self.showExecutableUnavailable = !self.userSettingsManager
+                        .executableExists
+                }
+            )
 
         }
         .frame(minWidth: 800, minHeight: 520)
     }
-    
-    private func title(_ string: String, iconName: String?, selected: Bool) -> some View {
+
+    private func title(_ string: String, iconName: String?, selected: Bool)
+        -> some View
+    {
         Group {
             if let iconName {
                 Label(string, systemImage: iconName)
@@ -151,42 +215,47 @@ struct ContentView: View {
         .padding(.all, 4)
 
     }
-    
+
     private func startSystem() async {
         do {
             self.applicationManager.showProgressView = true
             try await SystemService.startSystem(
                 appDataRootUrl: self.userSettingsManager.appRootUrl,
                 executablePathUrl: self.userSettingsManager.executablePathUrl,
-                timeoutSeconds: self.userSettingsManager.startSystemTimeoutSeconds,
-                messageStreamContinuation: self.applicationManager.messageStreamContinuation
+                timeoutSeconds: self.userSettingsManager
+                    .startSystemTimeoutSeconds,
+                messageStreamContinuation: self.applicationManager
+                    .messageStreamContinuation
             )
             self.applicationManager.showProgressView = false
             self.applicationManager.isSystemRunning = true
-        } catch(let error) {
+        } catch (let error) {
             self.applicationManager.error = error
         }
 
     }
-    
+
     private func stopSystem() async {
         do {
             self.applicationManager.showProgressView = true
             try await SystemService.stopSystem(
-                stopContainerTimeoutSeconds: self.userSettingsManager.stopContainerTimeoutSeconds,
-                shutdownTimeoutSeconds: self.userSettingsManager.shutdownSystemTimeoutSeconds,
-                messageStreamContinuation: self.applicationManager.messageStreamContinuation)
+                stopContainerTimeoutSeconds: self.userSettingsManager
+                    .stopContainerTimeoutSeconds,
+                shutdownTimeoutSeconds: self.userSettingsManager
+                    .shutdownSystemTimeoutSeconds,
+                messageStreamContinuation: self.applicationManager
+                    .messageStreamContinuation
+            )
 
             self.applicationManager.showProgressView = false
             self.applicationManager.isSystemRunning = false
-            
-        } catch(let error) {
+
+        } catch (let error) {
             self.applicationManager.error = error
         }
 
     }
 }
-
 
 #Preview {
     ContentView()

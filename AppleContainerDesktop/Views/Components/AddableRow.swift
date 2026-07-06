@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AddableRow<Content: View>: View {
-    @ViewBuilder var content: Content
+    @ContentBuilder var content: Content
 
     var onAdd: () -> Void
     var onDelete: () -> Void

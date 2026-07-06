@@ -6,9 +6,9 @@
 //
 
 import ContainerAPIClient
+import ContainerResource
 import ContainerizationError
 import SwiftUI
-import ContainerResource
 
 struct ImageListView: View {
     @Environment(ApplicationManager.self) private var applicationManager

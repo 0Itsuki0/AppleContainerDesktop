@@ -335,7 +335,7 @@ struct CreateContainerView: View {
     }
 
     // TODO: add more optional settings
-    @ViewBuilder
+    @ContentBuilder
     private var additionalSettings: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Container Name")
