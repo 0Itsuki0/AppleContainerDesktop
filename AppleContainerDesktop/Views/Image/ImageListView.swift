@@ -495,7 +495,7 @@ struct ImageListView: View {
             let images = try await ImageService.listImages()
             var displayModels: [ImageDisplayModel] = []
             var failed: [(String, Error)] = []
-            try await withThrowingTaskGroup(
+            await withTaskGroup(
                 of: (ImageDisplayModel?, (String, Error)?).self
             ) { group in
                 for image in images {
@@ -512,7 +512,7 @@ struct ImageListView: View {
                     }
                 }
 
-                for try await result in group {
+                for await result in group {
                     if let displayModel = result.0 {
                         displayModels.append(displayModel)
                     }

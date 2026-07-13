@@ -9,8 +9,8 @@ import Foundation
 import ContainerResource
 internal import ContainerizationOCI
 
-// ID for ClientContainer
-typealias ClientContainerID = String
+// ID for ContainerSnapshot
+typealias ContainerSnapshotID = String
 
 struct ContainerDisplayModel: Identifiable {
     // Unique name of the container if included.
@@ -19,7 +19,7 @@ struct ContainerDisplayModel: Identifiable {
         return self.container.id
     }
     // same as container.id
-    var id: ClientContainerID {
+    var id: ContainerSnapshotID {
         return self.container.id
     }
     var imageDescription: ImageDescription

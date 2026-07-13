@@ -5,89 +5,98 @@
 //  Created by Itsuki on 2025/09/08.
 //
 
-import Foundation
+import ContainerAPIClient
 //internal import ContainerizationOCI
 import ContainerResource
-import ContainerAPIClient
+import Foundation
 
- struct ContainerManagement {
-     // Override the entryPoint of the image
-     var entryPoint: String?
+struct ContainerManagement {
+    // Override the entryPoint of the image
+    var entryPoint: String?
 
-     // virtual filesystem mount
-     var virtualFileSystem: [Filesystem] = []
-     
-     // volume mount
-     var volumes: [Filesystem] = []
+    // virtual filesystem mount
+    var virtualFileSystem: [Filesystem] = []
 
-     // Published ports from container to host
-     // format: [host-ip:]host-port:container-port[/protocol]
-     var publishPorts: [PublishPort] = []
+    // volume mount
+    var volumes: [Filesystem] = []
 
-     // Published sockets from container to host
-     // format: host_path:container_path
-     var publishSockets: [PublishSocket] = []
+    // Published ports from container to host
+    // format: [host-ip:]host-port:container-port[/protocol]
+    var publishPorts: [PublishPort] = []
 
-     // temporary File system mount mount at a given path
-     var temporaryFileSystem: [Filesystem] = []
-     
-     // Assign a name to the container. If empty, will be a generated UUID
-     var name: String = ""
+    // Published sockets from container to host
+    // format: host_path:container_path
+    var publishSockets: [PublishSocket] = []
 
-     // Remove the container after it stops
-     var remove = false
+    // temporary File system mount mount at a given path
+    var temporaryFileSystem: [Filesystem] = []
 
-     // Platform for the image if it's multi-platform
-     var platform: String?
+    // Assign a name to the container. If empty, will be a generated UUID
+    var name: String = ""
 
-     // Set OS if image can target multiple operating systems
-     var os = "linux"
+    // Remove the container after it stops
+    var remove = false
 
-     // Set arch if image can target multiple architectures
-     var arch: String = Arch.hostArchitecture().rawValue
+    // Platform for the image if it's multi-platform
+    /// Precedence: `--platform` > `CONTAINER_DEFAULT_PLATFORM` > `--os`/`--arch` defaults.
+    ///
+    /// - Parameters:
+    ///   - platform: The value of the `--platform` flag, if provided.
+    ///   - os: The default OS value (always present).
+    ///   - arch: The default architecture value (always present).
+    ///   - environment: The environment dictionary to read from. Defaults to the current process environment.
+    ///   - log: An optional logger for environment variable notices.
+    /// - Returns: The resolved platform. Always returns a value since os/arch defaults are provided.
+    /// - Throws: ContainerizationError if a platform string (from flags or environment) is invalid.
 
+    var platform: String?
 
-     // Full file path to a custom kernel
-     // ie: File:// ...
-     var kernel: String?
+    // Set OS if image can target multiple operating systems
+    var os = "linux"
 
-     // Attach the container to a network
-     var networks: [String] = []
+    // Set arch if image can target multiple architectures
+    var arch: String = Arch.hostArchitecture().rawValue
 
+    // Full file path to a custom kernel
+    // ie: File:// ...
+    var kernel: String?
 
-     // Write the container ID to the path provided
-     var cidfile = ""
+    // Attach the container to a network
+    var networks: [String] = []
 
-     // Do not configure DNS in the container
-     var dnsDisabled = false
+    // Write the container ID to the path provided
+    var cidfile = ""
 
-     // DNS nameserver IP address
-     var dnsNameservers: [String] = []
+    // Do not configure DNS in the container
+    var dnsDisabled = false
 
-     // Default DNS domain
-     var dnsDomain: String? = nil
+    // DNS nameserver IP address
+    var dnsNameservers: [String] = []
 
-     // DNS search domains
-     var dnsSearchDomains: [String] = []
+    // Default DNS domain
+    var dnsDomain: String? = nil
 
-     // DNS options
-     var dnsOptions: [String] = []
+    // DNS search domains
+    var dnsSearchDomains: [String] = []
 
-     // Add key: value labels to the container
-     var labels: [String: String] = [:]
+    // DNS options
+    var dnsOptions: [String] = []
 
-     // Expose virtualization capabilities to the container. (Host must have nested virtualization support, and guest kernel must have virtualization capabilities enabled)
-     var virtualization: Bool = false
+    // Add key: value labels to the container
+    var labels: [String: String] = [:]
 
-     // Forward SSH agent socket to container
-     var ssh = false
-     
-     // "Mount the container's root filesystem as read-only")
-     public var readOnly = false
+    // Expose virtualization capabilities to the container. (Host must have nested virtualization support, and guest kernel must have virtualization capabilities enabled)
+    var virtualization: Bool = false
 
-     // "Run an init process inside the container that forwards signals and reaps processes")
-     public var useInit = false
-     
-     // Use a custom init image instead of the default
-     public var initImage: String?
+    // Forward SSH agent socket to container
+    var ssh = false
+
+    // "Mount the container's root filesystem as read-only")
+    public var readOnly = false
+
+    // "Run an init process inside the container that forwards signals and reaps processes")
+    public var useInit = false
+
+    // Use a custom init image instead of the default
+    public var initImage: String?
 }

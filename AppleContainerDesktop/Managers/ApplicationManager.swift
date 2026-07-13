@@ -5,14 +5,14 @@
 //  Created by Itsuki on 2025/09/04.
 //
 
-import SwiftUI
 internal import Logging
+import SwiftUI
 
 enum DisplayCategory: String, Identifiable, Equatable {
     case container
     case image
     case volume
-    
+
     var displayTitle: String {
         switch self {
         case .container:
@@ -23,7 +23,7 @@ enum DisplayCategory: String, Identifiable, Equatable {
             "Volumes"
         }
     }
-    
+
     var icon: String {
         switch self {
         case .container:
@@ -34,34 +34,33 @@ enum DisplayCategory: String, Identifiable, Equatable {
             "internaldrive.fill"
         }
     }
-    
+
     var id: String {
         self.rawValue
     }
-    
+
     // for customizing order
     static let allCases: [DisplayCategory] = [.image, .container, .volume]
 }
 
-
-
 @Observable
 class ApplicationManager {
-    static let containerGithub: URL? = URL(string: "https://github.com/apple/container")
+    static let containerGithub: URL? = URL(
+        string: "https://github.com/apple/container"
+    )
 
-    
     static var logger: Logger {
         LoggingSystem.bootstrap(StreamLogHandler.standardError)
         var logger = Logger(label: "itsuki.enjoy.AppleContainerDesktop")
         #if DEBUG
-        logger.logLevel = .info
+            logger.logLevel = .info
         #else
-        logger.logLevel = .error
+            logger.logLevel = .error
         #endif
 
         return logger
     }
-    
+
     var error: Error? {
         didSet {
             if let error = self.error {
@@ -79,19 +78,18 @@ class ApplicationManager {
             }
         }
     }
-    
-    
+
     var isSystemRunning: Bool = false
-    
+
     var selectedCategory: DisplayCategory = .image {
         didSet {
             self.selectedContainerID = nil
         }
     }
-    
-    var selectedContainerID: ClientContainerID?
+
+    var selectedContainerID: ContainerSnapshotID?
     var refreshContainerNeeded: Bool = false
-    
+
     var showProgressView: Bool = false {
         didSet {
             if self.showProgressView {
@@ -105,7 +103,8 @@ class ApplicationManager {
     @ObservationIgnored private var messageTask: Task<Void, Error>?
 
     init() {
-        (messageStream, messageStreamContinuation) = AsyncStream<String>.makeStream()
+        (messageStream, messageStreamContinuation) = AsyncStream<String>
+            .makeStream()
         self.messageTask = Task {
             for await message in messageStream {
                 if !message.isEmpty {
@@ -114,15 +113,17 @@ class ApplicationManager {
             }
         }
     }
-    
+
     deinit {
         self.messageTask?.cancel()
         self.messageTask = nil
-        
+
         Task {
             try? await SystemService.stopSystem(
-                stopContainerTimeoutSeconds: UserSettingsManager.defaultStopContainerTimeoutSeconds,
-                shutdownTimeoutSeconds: UserSettingsManager.defaultShutdownSystemTimeoutSeconds,
+                stopContainerTimeoutSeconds: UserSettingsManager
+                    .defaultStopContainerTimeoutSeconds,
+                shutdownTimeoutSeconds: UserSettingsManager
+                    .defaultShutdownSystemTimeoutSeconds,
                 messageStreamContinuation: nil
             )
         }

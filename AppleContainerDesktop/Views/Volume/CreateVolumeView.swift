@@ -155,8 +155,8 @@ struct CreateVolumeView: View {
 
                                     try await VolumeService.createVolume(
                                         name: name,
-                                        labels: validLabels,
-                                        options: validOptions,
+                                        labels: validLabels.dictRepresentation,
+                                        options: validOptions.dictRepresentation,
                                         size: (self.size, self.sizeType),
                                         messageStreamContinuation: self
                                             .applicationManager

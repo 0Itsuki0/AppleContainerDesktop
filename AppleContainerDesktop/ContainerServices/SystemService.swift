@@ -17,7 +17,7 @@ internal import ContainerizationOCI
 import Foundation
 import SystemPackage
 
-class SystemService {
+enum SystemService {
 
     static private let launchPrefix: String = "com.apple.container."
 

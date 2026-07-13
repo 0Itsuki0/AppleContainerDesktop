@@ -29,6 +29,45 @@
 		981C24112FFB41FC0070E6E4 /* MachineAPIService in Frameworks */ = {isa = PBXBuildFile; productRef = 981C24102FFB41FC0070E6E4 /* MachineAPIService */; };
 		981C24132FFB41FC0070E6E4 /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 981C24122FFB41FC0070E6E4 /* SocketForwarder */; };
 		981C24152FFB41FC0070E6E4 /* TerminalProgress in Frameworks */ = {isa = PBXBuildFile; productRef = 981C24142FFB41FC0070E6E4 /* TerminalProgress */; };
+		981C24162FFB42A60070E6E4 /* ContainerImagesService in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4D82E6BF5A300633147 /* ContainerImagesService */; };
+		981C24172FFB42A60070E6E4 /* ContainerLog in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4DA2E6BF5A300633147 /* ContainerLog */; };
+		981C24182FFB42A60070E6E4 /* ContainerPersistence in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4DE2E6BF5A300633147 /* ContainerPersistence */; };
+		981C24192FFB42A60070E6E4 /* ContainerPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E02E6BF5A300633147 /* ContainerPlugin */; };
+		981C241A2FFB42A60070E6E4 /* ContainerVersion in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E42E6BF5A300633147 /* ContainerVersion */; };
+		981C241B2FFB42A60070E6E4 /* ContainerXPC in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E62E6BF5A300633147 /* ContainerXPC */; };
+		981C241C2FFB42A60070E6E4 /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 98F2D4E82E6BF5A300633147 /* SocketForwarder */; };
+		981C241D2FFB42A60070E6E4 /* ContainerAPIService in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB540B2E8CD3A900AC749B /* ContainerAPIService */; };
+		981C241E2FFB42A60070E6E4 /* ContainerCommands in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB54112E8CD3A900AC749B /* ContainerCommands */; };
+		981C241F2FFB42A60070E6E4 /* ContainerImagesService in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB54132E8CD3A900AC749B /* ContainerImagesService */; };
+		981C24202FFB42A60070E6E4 /* ContainerLog in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB54152E8CD3A900AC749B /* ContainerLog */; };
+		981C24212FFB42A60070E6E4 /* ContainerPersistence in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB54192E8CD3A900AC749B /* ContainerPersistence */; };
+		981C24222FFB42A60070E6E4 /* ContainerPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB541B2E8CD3A900AC749B /* ContainerPlugin */; };
+		981C24232FFB42A60070E6E4 /* ContainerVersion in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB541F2E8CD3A900AC749B /* ContainerVersion */; };
+		981C24242FFB42A60070E6E4 /* ContainerXPC in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB54212E8CD3A900AC749B /* ContainerXPC */; };
+		981C24252FFB42A60070E6E4 /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 98EB54232E8CD3A900AC749B /* SocketForwarder */; };
+		981C24262FFB42A60070E6E4 /* ContainerAPIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3592FF9F66C0044EC75 /* ContainerAPIClient */; };
+		981C24272FFB42A60070E6E4 /* ContainerAPIService in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA35B2FF9F66C0044EC75 /* ContainerAPIService */; };
+		981C24282FFB42A60070E6E4 /* ContainerBuild in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA35D2FF9F66C0044EC75 /* ContainerBuild */; };
+		981C24292FFB42A60070E6E4 /* ContainerCommands in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA35F2FF9F66C0044EC75 /* ContainerCommands */; };
+		981C242A2FFB42A60070E6E4 /* ContainerImagesService in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3612FF9F66C0044EC75 /* ContainerImagesService */; };
+		981C242B2FFB42A60070E6E4 /* ContainerLog in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3632FF9F66C0044EC75 /* ContainerLog */; };
+		981C242C2FFB42A60070E6E4 /* ContainerNetworkClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3652FF9F66C0044EC75 /* ContainerNetworkClient */; };
+		981C242D2FFB42A60070E6E4 /* ContainerNetworkServer in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3672FF9F66C0044EC75 /* ContainerNetworkServer */; };
+		981C242E2FFB42A60070E6E4 /* ContainerNetworkVmnetServer in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3692FF9F66C0044EC75 /* ContainerNetworkVmnetServer */; };
+		981C242F2FFB42A60070E6E4 /* ContainerOS in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA36B2FF9F66C0044EC75 /* ContainerOS */; };
+		981C24302FFB42A60070E6E4 /* ContainerPersistence in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA36D2FF9F66C0044EC75 /* ContainerPersistence */; };
+		981C24312FFB42A60070E6E4 /* ContainerPlugin in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA36F2FF9F66C0044EC75 /* ContainerPlugin */; };
+		981C24322FFB42A60070E6E4 /* ContainerResource in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3712FF9F66C0044EC75 /* ContainerResource */; };
+		981C24332FFB42A60070E6E4 /* ContainerRuntimeClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3732FF9F66C0044EC75 /* ContainerRuntimeClient */; };
+		981C24342FFB42A60070E6E4 /* ContainerRuntimeLinuxClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3752FF9F66C0044EC75 /* ContainerRuntimeLinuxClient */; };
+		981C24352FFB42A60070E6E4 /* ContainerRuntimeLinuxServer in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3772FF9F66C0044EC75 /* ContainerRuntimeLinuxServer */; };
+		981C24362FFB42A60070E6E4 /* ContainerVersion in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3792FF9F66C0044EC75 /* ContainerVersion */; };
+		981C24372FFB42A60070E6E4 /* ContainerXPC in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA37B2FF9F66C0044EC75 /* ContainerXPC */; };
+		981C24382FFB42A60070E6E4 /* MachineAPIClient in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA37D2FF9F66C0044EC75 /* MachineAPIClient */; };
+		981C24392FFB42A60070E6E4 /* MachineAPIService in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA37F2FF9F66C0044EC75 /* MachineAPIService */; };
+		981C243A2FFB42A60070E6E4 /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3812FF9F66C0044EC75 /* SocketForwarder */; };
+		981C243B2FFB42A60070E6E4 /* TerminalProgress in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3832FF9F66C0044EC75 /* TerminalProgress */; };
+		981C24C52FFB42EC0070E6E4 /* DockerComposeParser in Frameworks */ = {isa = PBXBuildFile; productRef = 981C24C42FFB42EC0070E6E4 /* DockerComposeParser */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +95,45 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				981C243B2FFB42A60070E6E4 /* TerminalProgress in Frameworks */,
+				981C243A2FFB42A60070E6E4 /* SocketForwarder in Frameworks */,
+				981C24392FFB42A60070E6E4 /* MachineAPIService in Frameworks */,
+				981C24382FFB42A60070E6E4 /* MachineAPIClient in Frameworks */,
+				981C24372FFB42A60070E6E4 /* ContainerXPC in Frameworks */,
+				981C24362FFB42A60070E6E4 /* ContainerVersion in Frameworks */,
+				981C24352FFB42A60070E6E4 /* ContainerRuntimeLinuxServer in Frameworks */,
+				981C24342FFB42A60070E6E4 /* ContainerRuntimeLinuxClient in Frameworks */,
+				981C24332FFB42A60070E6E4 /* ContainerRuntimeClient in Frameworks */,
+				981C24322FFB42A60070E6E4 /* ContainerResource in Frameworks */,
+				981C24312FFB42A60070E6E4 /* ContainerPlugin in Frameworks */,
+				981C24302FFB42A60070E6E4 /* ContainerPersistence in Frameworks */,
+				981C242F2FFB42A60070E6E4 /* ContainerOS in Frameworks */,
+				981C242E2FFB42A60070E6E4 /* ContainerNetworkVmnetServer in Frameworks */,
+				981C242D2FFB42A60070E6E4 /* ContainerNetworkServer in Frameworks */,
+				981C242C2FFB42A60070E6E4 /* ContainerNetworkClient in Frameworks */,
+				981C242B2FFB42A60070E6E4 /* ContainerLog in Frameworks */,
+				981C242A2FFB42A60070E6E4 /* ContainerImagesService in Frameworks */,
+				981C24C52FFB42EC0070E6E4 /* DockerComposeParser in Frameworks */,
+				981C24292FFB42A60070E6E4 /* ContainerCommands in Frameworks */,
+				981C24282FFB42A60070E6E4 /* ContainerBuild in Frameworks */,
+				981C24272FFB42A60070E6E4 /* ContainerAPIService in Frameworks */,
+				981C24262FFB42A60070E6E4 /* ContainerAPIClient in Frameworks */,
+				981C24252FFB42A60070E6E4 /* SocketForwarder in Frameworks */,
+				981C24242FFB42A60070E6E4 /* ContainerXPC in Frameworks */,
+				981C24232FFB42A60070E6E4 /* ContainerVersion in Frameworks */,
+				981C24222FFB42A60070E6E4 /* ContainerPlugin in Frameworks */,
+				981C24212FFB42A60070E6E4 /* ContainerPersistence in Frameworks */,
+				981C24202FFB42A60070E6E4 /* ContainerLog in Frameworks */,
+				981C241F2FFB42A60070E6E4 /* ContainerImagesService in Frameworks */,
+				981C241E2FFB42A60070E6E4 /* ContainerCommands in Frameworks */,
+				981C241D2FFB42A60070E6E4 /* ContainerAPIService in Frameworks */,
+				981C241C2FFB42A60070E6E4 /* SocketForwarder in Frameworks */,
+				981C241B2FFB42A60070E6E4 /* ContainerXPC in Frameworks */,
+				981C241A2FFB42A60070E6E4 /* ContainerVersion in Frameworks */,
+				981C24192FFB42A60070E6E4 /* ContainerPlugin in Frameworks */,
+				981C24182FFB42A60070E6E4 /* ContainerPersistence in Frameworks */,
+				981C24172FFB42A60070E6E4 /* ContainerLog in Frameworks */,
+				981C24162FFB42A60070E6E4 /* ContainerImagesService in Frameworks */,
 				981C23FD2FFB41FC0070E6E4 /* ContainerOS in Frameworks */,
 				981C24112FFB41FC0070E6E4 /* MachineAPIService in Frameworks */,
 				981C24132FFB41FC0070E6E4 /* SocketForwarder in Frameworks */,
@@ -192,6 +270,7 @@
 				981C24102FFB41FC0070E6E4 /* MachineAPIService */,
 				981C24122FFB41FC0070E6E4 /* SocketForwarder */,
 				981C24142FFB41FC0070E6E4 /* TerminalProgress */,
+				981C24C42FFB42EC0070E6E4 /* DockerComposeParser */,
 			);
 			productName = AppleContainerDesktop;
 			productReference = 9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */;
@@ -223,6 +302,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				981C23E92FFB41FC0070E6E4 /* XCRemoteSwiftPackageReference "container" */,
+				981C24C32FFB42EC0070E6E4 /* XCLocalSwiftPackageReference "../DockerComposeParser" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9829EC432E17BA3C00A9F8D3 /* Products */;
@@ -496,6 +576,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		981C24C32FFB42EC0070E6E4 /* XCLocalSwiftPackageReference "../DockerComposeParser" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../DockerComposeParser;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		981C23E92FFB41FC0070E6E4 /* XCRemoteSwiftPackageReference "container" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -617,6 +704,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 981C23E92FFB41FC0070E6E4 /* XCRemoteSwiftPackageReference "container" */;
 			productName = TerminalProgress;
+		};
+		981C24C42FFB42EC0070E6E4 /* DockerComposeParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DockerComposeParser;
 		};
 		98AFA3592FF9F66C0044EC75 /* ContainerAPIClient */ = {
 			isa = XCSwiftPackageProductDependency;

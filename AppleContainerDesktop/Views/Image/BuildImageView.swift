@@ -304,7 +304,7 @@ struct BuildImageView: View {
                                         ],
                                         platforms: platforms,
                                         // build time variable
-                                        buildArguments: validBuildArguments,
+                                        buildArguments: validBuildArguments.stringArray,
                                         labels: [],
                                         noCache: false,
                                         targetStage: self.targetStage,

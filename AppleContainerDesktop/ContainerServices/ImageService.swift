@@ -18,7 +18,7 @@ import Foundation
 internal import Logging
 import NIO
 
-class ImageService {
+enum ImageService {
 
     static func listImages() async throws -> [ClientImage] {
         let containerSystemConfig: ContainerSystemConfig =
@@ -33,6 +33,24 @@ class ImageService {
         }
 
         return images
+    }
+
+    static func getImage(_ name: String) async throws
+        -> ClientImage
+    {
+        let containerSystemConfig: ContainerSystemConfig =
+            try await Application.loadContainerSystemConfig()
+        let result = try await ClientImage.get(
+            names: [name],
+            containerSystemConfig: containerSystemConfig
+        )
+        guard let first = result.images.first else {
+            throw ContainerizationError(
+                .notFound,
+                message: "image not found: \(name)"
+            )
+        }
+        return first
     }
 
     // pull image from a reference
@@ -80,6 +98,7 @@ class ImageService {
 
     // build image from Dockerfile
     // https://docs.docker.com/reference/cli/docker/buildx/build/#target
+
     static func buildImage(
         // file URL, ie: file://
         dockerFile: URL,
@@ -93,9 +112,58 @@ class ImageService {
             .init(type: .oci, additionalFields: [])
         ],
         platforms: Set<Platform> = [Platform.current],
-        // build time variable
-        buildArguments: [KeyValueModel] = [],
-        labels: [KeyValueModel] = [],
+        // build time variable including envs
+        buildArguments: [String] = [],
+        secrets: [String: Data] = [:],
+        labels: [String] = [],
+        noCache: Bool = false,
+        targetStage: String = "",
+        cacheIn: [String] = [],
+        cacheOut: [String] = [],
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        return try await buildImage(
+            dockerFileData: try Data(contentsOf: dockerFile),
+            contextDirectory: contextDirectory,
+            tag: tag,
+            cpus: cpus,
+            // memory in bytes
+            memory: memory,
+            vSockPort: vSockPort,
+            outputs: outputs,
+            platforms: platforms,
+            // build time variable including envs
+            buildArguments: buildArguments,
+            secrets: secrets,
+            labels: labels,
+            noCache: noCache,
+            targetStage: targetStage,
+            // TODO: Add type for cache
+            // https://docs.docker.com/reference/cli/docker/buildx/build/#cache-from
+            cacheIn: cacheIn,
+            cacheOut: cacheOut,
+            messageStreamContinuation: messageStreamContinuation
+        )
+
+    }
+
+    static func buildImage(
+        // file URL, ie: file://
+        dockerFileData: Data,
+        contextDirectory: URL,
+        tag: String,
+        cpus: Int64 = 2,
+        // memory in bytes
+        memory: UInt64 = 1024.mib(),
+        vSockPort: UInt32 = 8088,
+        outputs: [BuildImageOutputConfiguration] = [
+            .init(type: .oci, additionalFields: [])
+        ],
+        platforms: Set<Platform> = [Platform.current],
+        // build time variable including envs
+        buildArguments: [String] = [],
+        secrets: [String: Data] = [:],
+        labels: [String] = [],
         noCache: Bool = false,
         targetStage: String = "",
         // TODO: Add type for cache
@@ -106,6 +174,12 @@ class ImageService {
     ) async throws {
         let containerSystemConfig: ContainerSystemConfig =
             try await Application.loadContainerSystemConfig()
+
+        let ignoreFileURL = URL(
+            filePath: ".dockerignore",
+            relativeTo: contextDirectory
+        )
+        let ignoreFileData = try? Data(contentsOf: ignoreFileURL)
 
         messageStreamContinuation?.yield("Building image...")
 
@@ -185,7 +259,6 @@ class ImageService {
             )
         }
 
-        let dockerFileData = try Data(contentsOf: dockerFile)
         let systemHealth = try await ClientHealthCheck.ping(
             timeout: .seconds(10)
         )
@@ -224,12 +297,12 @@ class ImageService {
         let config = Builder.BuildConfig(
             buildID: buildID,
             contentStore: RemoteContentStoreClient(),
-            buildArgs: buildArguments.stringArray,
-            secrets: [:],
+            buildArgs: buildArguments,
+            secrets: secrets,
             contextDir: contextDirectory.absolutePath,
             dockerfile: dockerFileData,
-            dockerignore: nil,
-            labels: labels.stringArray,
+            dockerignore: ignoreFileData,
+            labels: labels,
             noCache: noCache,
             platforms: [Platform](platforms),
             terminal: nil,
@@ -323,7 +396,6 @@ class ImageService {
         }
 
         messageStreamContinuation?.yield(finalMessage)
-
     }
 
     static func saveImages(
@@ -383,7 +455,40 @@ class ImageService {
                 }
             )
         }
+    }
+    //    static func getImage(_ name: String) async throws
+    //        -> ClientImage
+    //    {
+    //        let containerSystemConfig: ContainerSystemConfig =
+    //            try await Application.loadContainerSystemConfig()
+    //        let result = try await ClientImage.get(
+    //            names: [name],
+    //            containerSystemConfig: containerSystemConfig
+    //        )
+    //        guard let first = result.images.first else {
+    //            throw ContainerizationError(
+    //                .notFound,
+    //                message: "image not found: \(name)"
+    //            )
+    //        }
+    //        return first
+    //    }
 
+    static func deleteImages(
+        _ images: [String],
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        let containerSystemConfig: ContainerSystemConfig =
+            try await Application.loadContainerSystemConfig()
+        let result = try await ClientImage.get(
+            names: images,
+            containerSystemConfig: containerSystemConfig
+        )
+        // NOTE: not check result.error here in case it is just image not found.
+        try await deleteImages(
+            result.images,
+            messageStreamContinuation: messageStreamContinuation
+        )
     }
 
     static func deleteImages(
@@ -561,5 +666,4 @@ struct BuildImageOutputConfiguration {
             )
         }
     }
-
 }

@@ -15,17 +15,21 @@ internal import ContainerizationOCI
 import ContainerizationOS
 import Foundation
 
-class ContainerService {
+enum ContainerService {
 
+    @discardableResult
     static func createContainer(
         imageReference: String,
-        arguments: [KeyValueModel],
+        // arguments are passed in following management.entry point,
+        // ie: as commands overrides the default command declared by the container image
+        // https://docs.docker.com/reference/compose-file/services/#command
+        arguments: [String],
         process: ContainerProcess,
         management: ContainerManagement,
         resource: ContainerConfiguration.Resources,
         registryScheme: String = RequestScheme.auto.rawValue,
         messageStreamContinuation: AsyncStream<String>.Continuation?
-    ) async throws {
+    ) async throws -> ContainerSnapshot {
         let containerSystemConfig: ContainerSystemConfig =
             try await Application.loadContainerSystemConfig()
 
@@ -38,7 +42,7 @@ class ContainerService {
             try await AdditionalUtility.createContainerConfig(
                 id: id,
                 imageReference: imageReference,
-                arguments: arguments.stringArray,
+                arguments: arguments,
                 process: process,
                 management: management,
                 resource: resource,
@@ -48,7 +52,6 @@ class ContainerService {
             )
 
         let options = ContainerCreateOptions(autoRemove: management.remove)
-        //        let container = try await ClientContainer.create(configuration: configuration, options: options, kernel: kernel)
         let client = ContainerClient()
         try await client.create(
             configuration: configuration,
@@ -76,6 +79,7 @@ class ContainerService {
         }
 
         messageStreamContinuation?.yield("Container created: \(id)")
+        return try await getContainer(id)
     }
 
     // attachContainerStdIn: true for interactive
@@ -174,16 +178,22 @@ class ContainerService {
         return containers
     }
 
-    static func getContainer(_ id: ClientContainerID) async throws
+    static func getContainer(_ id: ContainerSnapshotID) async throws
         -> ContainerSnapshot
     {
-        let client = ContainerClient()
-        let container = try await client.get(id: id)
-        return container
+        guard
+            let item = try await listContainers().first(where: { id == $0.id })
+        else {
+            throw ContainerizationError(
+                .notFound,
+                message: "container not found: \(id)"
+            )
+        }
+        return item
     }
 
     // boot: Boot log if true, otherwise, stdio
-    static func getContainerLog(_ id: ClientContainerID, boot: Bool)
+    static func getContainerLog(_ id: ContainerSnapshotID, boot: Bool)
         async throws -> String
     {
         let client = ContainerClient()
@@ -222,7 +232,7 @@ class ContainerService {
         )
 
         var failed: [(String, Error)] = []
-        try await withThrowingTaskGroup(of: (String, Error)?.self) { group in
+        await withTaskGroup(of: (String, Error)?.self) { group in
             for container in containers {
                 group.addTask {
                     do {
@@ -240,7 +250,7 @@ class ContainerService {
                 }
             }
 
-            for try await result in group {
+            for await result in group {
                 guard let result else {
                     continue
                 }
@@ -255,7 +265,24 @@ class ContainerService {
                     "Failed to stop one or more containers: \n\(failed.map({"\($0.0): \($0.1)"}).joined(separator: "\n"))"
             )
         }
+    }
 
+    static func deleteContainers(
+        _ containers: [ContainerSnapshotID],
+        force: Bool,
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        let containers = try await self.listContainers().filter({
+            containers.contains($0.id)
+        })
+        guard !containers.isEmpty else {
+            return
+        }
+        try await self.deleteContainers(
+            containers,
+            force: force,
+            messageStreamContinuation: messageStreamContinuation
+        )
     }
 
     static func deleteContainers(
@@ -270,7 +297,7 @@ class ContainerService {
         )
 
         var failed: [(String, Error)] = []
-        try await withThrowingTaskGroup(of: (String, Error)?.self) { group in
+        await withTaskGroup(of: (String, Error)?.self) { group in
             for container in containers {
                 group.addTask {
                     do {
@@ -295,7 +322,7 @@ class ContainerService {
                 }
             }
 
-            for try await result in group {
+            for await result in group {
                 guard let result else {
                     continue
                 }

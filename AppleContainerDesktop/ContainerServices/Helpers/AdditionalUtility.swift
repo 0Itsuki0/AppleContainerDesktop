@@ -121,7 +121,8 @@ enum AdditionalUtility {
         // Pull and unpack the initial filesystem
 
         messageStreamContinuation?.yield("Fetching init image...")
-        let initImageRef = management.initImage ?? containerSystemConfig.vminit.image
+        let initImageRef =
+            management.initImage ?? containerSystemConfig.vminit.image
         let initImage = try await ClientImage.fetch(
             reference: initImageRef,
             platform: .current,
@@ -203,7 +204,8 @@ enum AdditionalUtility {
         if management.dnsDisabled {
             config.dns = nil
         } else {
-            let domain = management.dnsDomain ?? containerSystemConfig.dns.domain
+            let domain =
+                management.dnsDomain ?? containerSystemConfig.dns.domain
             config.dns = .init(
                 nameservers: management.dnsNameservers,
                 domain: domain,

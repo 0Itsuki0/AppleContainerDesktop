@@ -9,7 +9,7 @@ import ContainerResource
 import SwiftUI
 
 struct ContainerDetailView: View {
-    var containerID: ClientContainerID
+    var containerID: ContainerSnapshotID
 
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(UserSettingsManager.self) private var userSettingsManager
@@ -387,7 +387,7 @@ struct ContainerDetailView: View {
 }
 
 private struct ContainerLogsView: View {
-    var containerID: ClientContainerID
+    var containerID: ContainerSnapshotID
 
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(UserSettingsManager.self) private var userSettingsManager
@@ -460,11 +460,4 @@ private struct ContainerLogsView: View {
             self.applicationManager.error = error
         }
     }
-}
-
-#Preview {
-    ContainerDetailView(containerID: "a260263f-f5ab-4ad0-85bb-3b4c6f0e2f20")
-        .environment(ApplicationManager())
-        .environment(UserSettingsManager())
-        .frame(minWidth: 400, minHeight: 300)
 }

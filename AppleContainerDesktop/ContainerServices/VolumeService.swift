@@ -15,7 +15,7 @@ import ContainerizationExtras
 internal import ContainerizationOCI
 import ContainerizationOS
 
-class VolumeService {
+enum VolumeService {
 
     // labels: metadata for a volume
     // Options: driver specific options
@@ -23,23 +23,25 @@ class VolumeService {
     @discardableResult
     static func createVolume(
         name: String,
-        labels: [KeyValueModel],
-        options: [KeyValueModel],
-        size: (UInt64, SizeType)?,
+        driver: String = "local",
+        labels: [String: String] = [:],
+        options: [String: String] = [:],
+        size: (UInt64, SizeType)? = nil,
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws -> VolumeConfiguration {
         messageStreamContinuation?.yield("Creating volume: \(name)...")
 
-        var driverOptions = options.dictRepresentation
+        var driverOptions = options
         if let size = size {
-            driverOptions[VolumeConfiguration.sizeOptionKey] = "\(size.0)\(size.1.suffix)"
+            driverOptions[VolumeConfiguration.sizeOptionKey] =
+                "\(size.0)\(size.1.suffix)"
         }
 
         let volume = try await ClientVolume.create(
             name: name,
-            driver: "local",
+            driver: driver,
             driverOpts: driverOptions,
-            labels: labels.dictRepresentation
+            labels: labels
         )
 
         messageStreamContinuation?.yield("Volume created: \(volume.id)")
@@ -50,6 +52,40 @@ class VolumeService {
     static func listVolumes() async throws -> [VolumeConfiguration] {
         let volumes = try await ClientVolume.list()
         return volumes
+    }
+
+    // Memo: VolumeConfiguration to VolumeResource
+    // let volumeResources = volumes.map { VolumeResource(configuration: $0) }
+    // NOTE: not using ClientVolume.inspect() to handle the notFound case specifically
+    static func getVolume(_ name: String) async throws -> VolumeConfiguration {
+        // for volumes, id and name are the same
+        guard
+            let volume = try await listVolumes().first(where: {
+                $0.name == name
+            })
+        else {
+            throw ContainerizationError(
+                .notFound,
+                message: "volume not found: \(name)"
+            )
+        }
+        return volume
+    }
+
+    static func deleteVolumes(
+        _ volumes: [String],
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        let volumes = try await self.listVolumes().filter({
+            volumes.contains($0.name)
+        })
+        guard !volumes.isEmpty else {
+            return
+        }
+        try await self.deleteVolumes(
+            volumes,
+            messageStreamContinuation: messageStreamContinuation
+        )
     }
 
     static func deleteVolumes(
@@ -63,7 +99,7 @@ class VolumeService {
 
         var failed: [(String, Error)] = []
 
-        try await withThrowingTaskGroup(of: (String, Error)?.self) { group in
+        await withTaskGroup(of: (String, Error)?.self) { group in
             for volume in volumes {
                 group.addTask {
                     do {
@@ -81,7 +117,7 @@ class VolumeService {
                 }
             }
 
-            for try await result in group {
+            for await result in group {
                 guard let result else {
                     continue
                 }

@@ -11,8 +11,8 @@ import SwiftUI
 
 struct InUseContainersView: View {
     var containers: [ContainerDisplayModel]
-    var updateContainer: (ClientContainerID) async throws -> Void
-    var deleteContainer: (ClientContainerID) -> Void
+    var updateContainer: (ContainerSnapshotID) async throws -> Void
+    var deleteContainer: (ContainerSnapshotID) -> Void
 
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(UserSettingsManager.self) private var userSettingsManager

@@ -223,8 +223,8 @@ struct CreateContainerView: View {
                                                 try await VolumeService
                                                 .createVolume(
                                                     name: trimmedName,
-                                                    labels: labels,
-                                                    options: [],
+                                                    labels: labels.dictRepresentation,
+                                                    options: [:],
                                                     size: nil,
                                                     messageStreamContinuation:
                                                         self.applicationManager

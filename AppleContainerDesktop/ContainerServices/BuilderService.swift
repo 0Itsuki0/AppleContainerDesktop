@@ -16,7 +16,7 @@ internal import ContainerizationOCI
 import ContainerizationOS
 import Foundation
 
-class BuilderService {
+enum BuilderService {
 
     static let buildkitContainerId = "buildkit"
     static private let containerSystemConfig = ContainerSystemConfig()

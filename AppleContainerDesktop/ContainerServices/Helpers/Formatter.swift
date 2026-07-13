@@ -7,7 +7,7 @@
 
 import Foundation
 
-class Formatter {
+enum Formatter {
     static let byteCountFormatter = ByteCountFormatter()
     
     static var dateFormatter: DateFormatter {
