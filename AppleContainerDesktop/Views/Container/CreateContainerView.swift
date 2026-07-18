@@ -36,6 +36,11 @@ private struct VolumeConfigurationTemp: Identifiable {
     var path: String = ""
 }
 
+private struct NetworkConfigurationTemp: Identifiable {
+    let id: UUID = UUID()
+    var name: String = ""
+}
+
 struct CreateContainerView: View {
 
     @Environment(ApplicationManager.self) private var applicationManager
@@ -68,6 +73,11 @@ struct CreateContainerView: View {
     @SwiftUI.State private var showPickVolume: Bool = false
     @SwiftUI.State private var availableVolumes: [VolumeConfiguration] = []
     @SwiftUI.State private var volumeInitialized: Bool = false
+
+    @SwiftUI.State private var networks: [NetworkConfigurationTemp] = []
+    @SwiftUI.State private var showPickNetwork: Bool = false
+    @SwiftUI.State private var availableNetworks: [NetworkResource] = []
+    @SwiftUI.State private var networkInitialized: Bool = false
 
     var body: some View {
         ScrollView {
@@ -244,6 +254,14 @@ struct CreateContainerView: View {
                                     }
 
                                     self.management.volumes = validVolumeFSs
+
+                                    self.management.networks = self.networks
+                                        .map({
+                                            $0.name.trimmingCharacters(
+                                                in: .whitespacesAndNewlines
+                                            )
+                                        })
+                                        .filter({ !$0.isEmpty })
 
                                     let validPorts = self.ports.filter({
                                         $0.host > 0 && $0.container > 0
@@ -512,6 +530,134 @@ struct CreateContainerView: View {
             )
 
         }
+
+        VStack(alignment: .leading, spacing: 8) {
+
+            HStack(alignment: .lastTextBaseline) {
+                Text("Networks")
+                Text("Name of the network to attach")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(
+                "⭑ If empty, the container will be attached to the default network."
+            )
+            .lineLimit(1)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+            if self.networks.isEmpty {
+                Button(
+                    action: {
+                        self.networks.append(.init())
+                    },
+                    label: {
+                        Text("Add Network")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .blue
+                    )
+                )
+            }
+
+            ForEach(
+                $networks,
+                content: { $network in
+
+                    AddableRow(
+                        content: {
+                            NetworkRow(
+                                networkName: $network.name,
+                                showPickNetwork: $showPickNetwork,
+                                availableNetworks: $availableNetworks,
+                                showAvailableNetwork: {
+                                    guard !self.networkInitialized else {
+                                        self.showPickNetwork = true
+                                        return
+                                    }
+                                    Task {
+                                        do {
+                                            self.showProgressView = true
+                                            self.availableNetworks =
+                                                try await NetworkService
+                                                .listNetworks()
+                                            self.showProgressView = false
+                                            self.networkInitialized = true
+                                            self.showPickNetwork = true
+                                        } catch (let error) {
+                                            self.errorMessage = "\(error)"
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                        onAdd: {
+                            self.networks.append(.init())
+                        },
+                        onDelete: {
+                            self.networks.removeAll(where: {
+                                $0.id == network.id
+                            })
+                        }
+                    )
+                }
+            )
+
+        }
+    }
+}
+
+private struct NetworkRow: View {
+    @Binding var networkName: String
+    @Binding var showPickNetwork: Bool
+    @Binding var availableNetworks: [NetworkResource]
+
+    var showAvailableNetwork: () -> Void
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Text("Name")
+                .frame(maxHeight: .infinity)
+
+            TextField(text: $networkName, prompt: Text(""), label: {})
+                .frame(maxHeight: .infinity)
+
+            Button(
+                action: {
+                    self.showAvailableNetwork()
+                },
+                label: {
+                    Image(systemName: "ellipsis")
+                        .padding(.horizontal, 2)
+                        .frame(maxHeight: .infinity)
+                }
+            )
+            .buttonStyle(
+                CustomButtonStyle(
+                    backgroundShape: .roundedRectangle(4),
+                    backgroundColor: .secondary
+                )
+            )
+
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .sheet(
+            isPresented: $showPickNetwork,
+            content: {
+                NetworkPickingView(
+                    networks: self.availableNetworks,
+                    onNetworkSelect: {
+                        self.networkName = $0
+                    }
+                )
+            }
+        )
+
     }
 }
 

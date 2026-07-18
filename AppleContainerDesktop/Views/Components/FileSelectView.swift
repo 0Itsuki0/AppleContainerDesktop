@@ -9,8 +9,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 extension FileSelectView {
-    init(fileURL: Binding<URL>, errorMessage: Binding<String?>, allowedContentTypes: [UTType]) {
-        let fileBinding = Binding<URL?> (
+    init(
+        fileURL: Binding<URL>,
+        errorMessage: Binding<String?>,
+        allowedContentTypes: [UTType]
+    ) {
+        let fileBinding = Binding<URL?>(
             get: {
                 URL(filePath: fileURL.wrappedValue.absolutePath)
             },
@@ -30,11 +34,11 @@ struct FileSelectView: View {
     // file scheme, ie: file://
     @Binding var fileURL: URL?
     @Binding var errorMessage: String?
-    
+
     var allowedContentTypes: [UTType]
-    
+
     @State private var showImporter: Bool = false
-    
+
     var body: some View {
         HStack(spacing: 8) {
             Text(fileURL?.absolutePath ?? "")
@@ -42,14 +46,20 @@ struct FileSelectView: View {
                 .lineLimit(1)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .leading
+                )
                 .background(
                     RoundedRectangle(cornerRadius: 4)
                         .fill(.secondary.opacity(0.5))
-                        .stroke(.secondary.opacity(0.8), style: .init(lineWidth: 1))
+                        .stroke(
+                            .secondary.opacity(0.8),
+                            style: .init(lineWidth: 1)
+                        )
                 )
-            
-            
+
             Button {
                 if let fileURL {
                     self.openFile(fileURL)
@@ -62,18 +72,24 @@ struct FileSelectView: View {
             .buttonStyle(.link)
             .disabled(fileURL == nil)
 
-
             Spacer()
 
-            Button(action: {
-                self.showImporter = true
-            }, label: {
-                Image(systemName: "ellipsis")
-                    .padding(.horizontal, 2)
-                    .frame(maxHeight: .infinity)
-            })
-            .buttonStyle(CustomButtonStyle(backgroundShape: .roundedRectangle(4), backgroundColor: .secondary))
-
+            Button(
+                action: {
+                    self.showImporter = true
+                },
+                label: {
+                    Image(systemName: "ellipsis")
+                        .padding(.horizontal, 2)
+                        .frame(height: 16)
+                }
+            )
+            .buttonStyle(
+                CustomButtonStyle(
+                    backgroundShape: .roundedRectangle(4),
+                    backgroundColor: .secondary
+                )
+            )
         }
         .fixedSize(horizontal: false, vertical: true)
         .fileImporter(
@@ -87,17 +103,129 @@ struct FileSelectView: View {
                     self.errorMessage = "File Url is not available."
                     return
                 }
-                self.fileURL = url.isFileURL ? url : URL(filePath: url.absolutePath)
+                self.fileURL =
+                    url.isFileURL ? url : URL(filePath: url.absolutePath)
             case .failure(let error):
                 self.errorMessage = "failed to import file: \(error)."
                 return
             }
         }
         .fileDialogBrowserOptions([.includeHiddenFiles])
-        .fileDialogDefaultDirectory(fileURL?.parentDirectory ?? (try? FileManager.default.url(for: .desktopDirectory, in: .userDomainMask, appropriateFor: nil, create: false)))
+        .fileDialogDefaultDirectory(
+            fileURL?.parentDirectory
+                ?? (try? FileManager.default.url(
+                    for: .desktopDirectory,
+                    in: .userDomainMask,
+                    appropriateFor: nil,
+                    create: false
+                ))
+        )
         .fileDialogConfirmationLabel(Text("Select"))
     }
-    
+
+    private func openFile(_ url: URL) {
+        let result = NSWorkspace.shared.selectFile(
+            url.absolutePath,
+            inFileViewerRootedAtPath: url.parentDirectory.absolutePath
+        )
+        if !result {
+            self.errorMessage = "Failed to open the File."
+        }
+    }
+}
+
+struct MultiFileSelectView: View {
+    // file scheme, ie: file://
+    @Binding var fileURLs: [URL]
+    @Binding var errorMessage: String?
+
+    var allowedContentTypes: [UTType]
+
+    @State private var showImporter: Bool = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading) {
+                if fileURLs.isEmpty {
+                    Text("(No files selected)")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                ForEach(fileURLs, id: \.self) { fileURL in
+                    HStack(spacing: 8) {
+                        Text(fileURL.absolutePath)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button {
+                            self.openFile(fileURL)
+                        } label: {
+                            Image(systemName: "arrow.right")
+                                .contentShape(Rectangle())
+                                .fontWeight(.semibold)
+                        }
+                        .buttonStyle(.link)
+                    }
+                }
+            }
+
+            Spacer()
+
+            Button(
+                action: {
+                    self.showImporter = true
+                },
+                label: {
+                    Image(systemName: "ellipsis")
+                        .padding(.horizontal, 2)
+                        .frame(height: 16)
+                }
+            )
+            .buttonStyle(
+                CustomButtonStyle(
+                    backgroundShape: .roundedRectangle(4),
+                    backgroundColor: .secondary
+                )
+            )
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: self.allowedContentTypes,
+            allowsMultipleSelection: true
+        ) { result in
+            switch result {
+            case .success(let urls):
+                self.fileURLs = urls.map({ url in
+                    if url.isFileURL {
+                        return url
+                    }
+                    return URL(filePath: url.absolutePath)
+                })
+
+            case .failure(let error):
+                self.errorMessage = "failed to import file: \(error)."
+                return
+            }
+        }
+        .fileDialogBrowserOptions([.includeHiddenFiles])
+        .fileDialogDefaultDirectory(
+            (try? FileManager.default.url(
+                for: .desktopDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: false
+            ))
+        )
+        .fileDialogConfirmationLabel(Text("Select"))
+    }
+
     private func openFile(_ url: URL) {
         let result = NSWorkspace.shared.selectFile(
             url.absolutePath,

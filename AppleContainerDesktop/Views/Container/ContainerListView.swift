@@ -239,6 +239,30 @@ struct ContainerListView: View {
                     }
                     .width(min: 120, ideal: 120, max: 160)
 
+                    TableColumn(TableHelper.columnHeader("Volume(s)")) {
+                        container in
+                        Text(
+                            container.container.volumeNames.joined(
+                                separator: "\n"
+                            )
+                        )
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .width(min: 120, ideal: 120, max: 160)
+
+                    TableColumn(TableHelper.columnHeader("Network(s)")) {
+                        container in
+                        Text(
+                            container.container.networkNames.joined(
+                                separator: "\n"
+                            )
+                        )
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .width(min: 100, ideal: 100, max: 160)
+
                     TableColumn(TableHelper.columnHeader("OS")) { container in
                         Text(container.os)
                     }

@@ -16,33 +16,6 @@ import Foundation
 
 extension ComposeService {
 
-    static func getServicesToBuild(
-        compose: DockerCompose,
-        requestedServices: [String],
-        requestedProfiles: [String],
-    ) -> [(serviceName: String, service: Service)] {
-        // service that is either part of the active profile or requested service
-        let selectedNames = Set(
-            selectServices(
-                compose: compose,
-                requestedServices: requestedServices,
-                requestedProfiles: requestedProfiles,
-            )
-            .map(\.serviceName)
-        )
-
-        // service that needs to be built
-        let servicesToBuild: [(serviceName: String, service: Service)] = compose
-            .services.compactMap { name, service in
-                guard let service, service.build != nil,
-                    selectedNames.contains(name)
-                else { return nil }
-                return (name, service)
-            }
-
-        return servicesToBuild
-    }
-
     // Build compose
     // - services that uses local docker file
     static func buildCompose(
@@ -86,7 +59,7 @@ extension ComposeService {
 
         // service that needs to be built
         let servicesToBuild: [(serviceName: String, service: Service)] =
-            getServicesToBuild(
+            try getServicesToBuild(
                 compose: compose,
                 requestedServices: requestedServices,
                 requestedProfiles: requestedProfiles
@@ -169,58 +142,6 @@ extension ComposeService {
         }
 
         return (imageResult, failedResource)
-    }
-
-    static func buildVolumes(
-        _ volumesToBuild: [(String, Volume)],
-        shouldRebuild: Bool,
-        messageStreamContinuation: AsyncStream<String>.Continuation?
-    ) async -> (
-        volumeResult: [VolumeConfiguration], failedResource: [String]
-    ) {
-        var volumeResult: [VolumeConfiguration] = []
-        var failedResource: [String] = []
-
-        await withTaskGroup(
-            of: (volume: VolumeConfiguration?, error: String?).self
-        ) { [volumesToBuild] group in
-
-            for (volumeName, volume) in volumesToBuild {
-                group.addTask { [volumeName, volume] in
-                    do {
-                        messageStreamContinuation?.yield(
-                            "Building volume \(volume.name ?? volumeName)."
-                        )
-                        let volume = try await buildVolume(
-                            volume,
-                            shouldRebuild: shouldRebuild,
-                            volumeName: volumeName
-                        )
-                        return (volume, nil)
-                    } catch (let error) {
-                        messageStreamContinuation?.yield(
-                            "failed to build volume \(volume.name ?? volumeName): \(error)"
-                        )
-                        return (
-                            nil,
-                            "\(volume.name ?? volumeName): \(error)"
-                        )
-                    }
-                }
-            }
-
-            for await result in group {
-                if let volume = result.volume {
-                    volumeResult.append(volume)
-                    continue
-                }
-                if let error = result.error {
-                    failedResource.append(error)
-                }
-            }
-        }
-
-        return (volumeResult, failedResource)
     }
 
     static func buildNetworks(
@@ -547,7 +468,7 @@ extension ComposeService {
     }
 
     // return nil if should build
-    static func shouldBuildVolume(_ name: String, shouldRebuild: Bool)
+    private static func shouldBuildVolume(_ name: String, shouldRebuild: Bool)
         async throws -> VolumeConfiguration?
     {
         guard shouldRebuild == false else {
@@ -571,11 +492,11 @@ extension ComposeService {
         }
     }
 
-    static func shouldBuildNetwork(_ name: String, shouldRebuild: Bool)
+    private static func shouldBuildNetwork(_ name: String, shouldRebuild: Bool)
         async throws -> NetworkResource?
     {
         guard shouldRebuild == false else {
-            try? await NetworkService.deleteNetwork(
+            try? await NetworkService.deleteNetworks(
                 [name],
                 messageStreamContinuation: nil
             )
@@ -594,7 +515,7 @@ extension ComposeService {
         }
     }
 
-    static func shouldBuildImage(_ name: String, shouldRebuild: Bool)
+    private static func shouldBuildImage(_ name: String, shouldRebuild: Bool)
         async throws -> ClientImage?
     {
         guard shouldRebuild == false else {
@@ -615,5 +536,32 @@ extension ComposeService {
             }
             throw error
         }
+    }
+
+    private static func getServicesToBuild(
+        compose: DockerCompose,
+        requestedServices: [String],
+        requestedProfiles: [String],
+    ) throws -> [(serviceName: String, service: Service)] {
+        // service that is either part of the active profile or requested service
+        let selectedNames = Set(
+            try selectServices(
+                compose: compose,
+                requestedServices: requestedServices,
+                requestedProfiles: requestedProfiles,
+            )
+            .map(\.serviceName)
+        )
+
+        // service that needs to be built
+        let servicesToBuild: [(serviceName: String, service: Service)] = compose
+            .services.compactMap { name, service in
+                guard let service, service.build != nil,
+                    selectedNames.contains(name)
+                else { return nil }
+                return (name, service)
+            }
+
+        return servicesToBuild
     }
 }

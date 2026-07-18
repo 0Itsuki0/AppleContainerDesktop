@@ -31,7 +31,7 @@ extension ContainerSnapshot {
     }
     
     var volumeNames: [String] {
-        let volumeNames = self.volumeFSs.map(\.volumeName).filter({$0 != nil}).map({$0!})
+        let volumeNames = self.volumeFSs.map(\.volumeName).removeNilValue()
         return volumeNames
     }
 

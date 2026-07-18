@@ -14,7 +14,7 @@ import ContainerizationOS
 import DockerComposeParser
 import Foundation
 
-// TODO: - warn the user on the following if encountered
+// MARK: - warn the user on the following if encountered
 // 1. explicit ipV4 and ipV6 has to be set (as of current implementation of Container)
 // 2. Remote OCI not supported (as of current implementation of DockerComposeParser)
 // 3. build.network not supported when building an image from dockerfile (as of current implementation of Container)
@@ -22,16 +22,22 @@ import Foundation
 // 6. network alias not supported  (as of current implementation of Container)
 
 enum ComposeService {
+    private static let userDefaults = UserDefaults.standard
+    private static let userDefaultsKey = "com.apple.container.desktop.compose"
+    private static let encoder = JSONEncoder()
+    private static let decoder = JSONDecoder()
 
-    // Not deleting any container yet.
-    // Refer to the comment of `upCompose` above.
-    static func downCompose() async throws {
-
+    static func listComposes() -> [ComposeResource] {
+        if let data = userDefaults.data(forKey: userDefaultsKey) {
+            return (try? decoder.decode([ComposeResource].self, from: data))
+                ?? []
+        }
+        return []
     }
 
-    // delete all resources
-    static func deleteCompose() async throws {
-
+    static func saveComposes(_ composes: [ComposeResource]) throws {
+        let data = try encoder.encode(composes)
+        userDefaults.set(data, forKey: userDefaultsKey)
     }
 
     static func resolveActiveProfiles(_ profile: [String]) -> Set<
@@ -84,7 +90,7 @@ enum ComposeService {
         compose: DockerCompose,
         requestedServices: [String],
         requestedProfiles: [String]
-    ) -> [(serviceName: String, service: Service)] {
+    ) throws -> [(serviceName: String, service: Service)] {
         let activeProfiles = resolveActiveProfiles(requestedProfiles)
 
         // Route both the explicit-service-name and default cases through the same
@@ -100,7 +106,9 @@ enum ComposeService {
             }
 
         let servicesByName = Dictionary(
-            uniqueKeysWithValues: allServices.map { ($0.serviceName, $0.service) }
+            uniqueKeysWithValues: allServices.map {
+                ($0.serviceName, $0.service)
+            }
         )
 
         let seedNames: [String]
@@ -108,7 +116,7 @@ enum ComposeService {
             seedNames = requestedServices
         } else {
             seedNames =
-            allServices
+                allServices
                 .filter {
                     isProfileEligible(
                         serviceProfiles: $0.service.profiles,
@@ -120,20 +128,24 @@ enum ComposeService {
 
         var selected = Set<String>()
 
-        func include(_ serviceName: String) {
-            guard let service = servicesByName[serviceName],
-                selected.insert(serviceName).inserted
-            else {
+        func include(_ serviceName: String) throws {
+            guard let service = servicesByName[serviceName] else {
+                throw ContainerizationError(
+                    .invalidArgument,
+                    message: "Service \(serviceName) does not exist."
+                )
+            }
+            guard selected.insert(serviceName).inserted else {
                 return
             }
 
             for dependency in service.depends_on ?? [:] {
-                include(dependency.key)
+                try include(dependency.key)
             }
         }
 
         for serviceName in seedNames {
-            include(serviceName)
+            try include(serviceName)
         }
 
         return allServices.filter { selected.contains($0.serviceName) }
@@ -145,6 +157,110 @@ enum ComposeService {
     ) -> Bool {
         guard let serviceProfiles, !serviceProfiles.isEmpty else { return true }
         return !Set(serviceProfiles).isDisjoint(with: activeProfiles)
+    }
+
+    typealias StagedService = (
+        serviceName: String,
+        service: Service,
+        // when nil, nothing depends on it
+        condition: Service.DependencyCondition?
+    )
+
+    /// Returns the services in topological order based on `depends_on` relationships.
+    /// Ordering semantics:
+    /// Dependencies appear before dependents, which is what we want for up (start order). For down just reverse the result.
+    /// Returns the services in topological order based on `depends_on` relationships.
+    /// Dependencies are ordered before the services that depend on them.
+    static func topoSortConfiguredServices(
+        _ services: [(serviceName: String, service: Service)]
+    ) throws -> [[StagedService]] {
+        var serviceByName: [String: Service] = [:]
+        var inputOrder: [String: Int] = [:]
+        for (i, entry) in services.enumerated()
+        where serviceByName[entry.serviceName] == nil {
+            serviceByName[entry.serviceName] = entry.service
+            inputOrder[entry.serviceName] = i
+        }
+
+        var dependents: [String: [String]] = [:]
+        var inDegree: [String: Int] = [:]
+        var strongest: [String: Service.DependencyCondition] = [:]
+
+        for (name, service) in services {
+            inDegree[name, default: 0] += 0
+            for (depName, dependency) in service.depends_on ?? [:] {
+                guard let dependency else { continue }
+                guard serviceByName[depName] != nil else { continue }
+                dependents[depName, default: []].append(name)
+                inDegree[name, default: 0] += 1
+
+                let condition = dependency.condition
+                if let existing = strongest[depName] {
+                    if condition.severity > existing.severity {
+                        strongest[depName] = condition
+                    }
+                } else {
+                    strongest[depName] = condition
+                }
+            }
+        }
+
+        var currentLevel = inDegree.filter { $0.value == 0 }.map(\.key)
+        var stages: [[StagedService]] = []
+        var placed = 0
+
+        while !currentLevel.isEmpty {
+            currentLevel.sort { inputOrder[$0]! < inputOrder[$1]! }
+
+            stages.append(
+                currentLevel.map { name in
+                    (
+                        serviceName: name,
+                        service: serviceByName[name]!,
+                        condition: strongest[name]
+                    )
+                }
+            )
+            placed += currentLevel.count
+
+            var nextLevel: [String] = []
+            for name in currentLevel {
+                for dependent in dependents[name] ?? [] {
+                    inDegree[dependent]! -= 1
+                    if inDegree[dependent] == 0 {
+                        nextLevel.append(dependent)
+                    }
+                }
+            }
+            currentLevel = nextLevel
+        }
+
+        guard placed == services.count else {
+            let stuck = inDegree.filter { $0.value > 0 }.keys.sorted()
+            throw ContainerizationError(
+                .invalidArgument,
+                message:
+                    "Failed to resolve dependency for services: \(stuck)"
+            )
+        }
+
+        return stages
+    }
+
+    static func containerName(
+        explicit: String?,
+        projectName: String,
+        serviceName: String,
+        index: Int,
+        total: Int
+    ) -> String {
+        if let explicit {
+            return explicit
+        }
+        if total == 1 {
+            return "\(projectName)_\(serviceName)"
+        }
+        return "\(projectName)_\(serviceName)_\(index)"
     }
 
 }
@@ -160,19 +276,5 @@ extension Array {
     func removeNilValue<V>(_ valueType: V.Type = V.self) -> [V]
     where Element == V? {
         return self.filter({ $0 != nil }).map({ $0! })
-    }
-}
-
-extension Service.Build.CacheEntry {
-    // https://docs.docker.com/reference/compose-file/build/#cache_from
-    var stringRepresentation: String? {
-        guard !options.isEmpty else {
-            return nil
-        }
-        let typeString = "type=\(type)"
-        let optionStrings: [String] = options.map({
-            AdditionalUtility.keyValueString(key: $0.key, value: $0.value)
-        })
-        return "\(typeString),\(optionStrings.joined(separator: ","))"
     }
 }

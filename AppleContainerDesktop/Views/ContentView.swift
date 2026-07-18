@@ -49,7 +49,6 @@ struct ContentView: View {
 
                 },
                 detail: {
-
                     NavigationStack {
                         VStack {
                             switch applicationManager.selectedCategory {
@@ -255,10 +254,4 @@ struct ContentView: View {
         }
 
     }
-}
-
-#Preview {
-    ContentView()
-        .environment(ApplicationManager())
-        .environment(UserSettingsManager())
 }

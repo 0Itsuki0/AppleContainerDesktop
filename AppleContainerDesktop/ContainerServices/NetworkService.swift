@@ -92,7 +92,7 @@ enum NetworkService {
         return item
     }
 
-    static func deleteNetwork(
+    static func deleteNetworks(
         _ networks: [String],
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws {
@@ -102,13 +102,13 @@ enum NetworkService {
         guard !networks.isEmpty else {
             return
         }
-        try await self.deleteNetwork(
+        try await self.deleteNetworks(
             networks,
             messageStreamContinuation: messageStreamContinuation
         )
     }
 
-    static func deleteNetwork(
+    static func deleteNetworks(
         _ networks: [NetworkResource],
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws {
@@ -141,6 +141,9 @@ enum NetworkService {
                         )
                         return nil
                     } catch (let error) {
+                        if error.isResourceNotFound {
+                            return nil
+                        }
                         messageStreamContinuation?.yield(
                             "failed to delete network \(network.id): \(error)"
                         )

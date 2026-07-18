@@ -1,40 +1,40 @@
 //
-//  VolumeListView.swift
+//  NetworkListView.swift
 //  AppleContainerDesktop
 //
-//  Created by Itsuki on 2025/11/02.
+//  Created by Itsuki on 2026/07/18.
 //
 
 import ContainerResource
 import SwiftUI
 
-struct VolumeListView: View {
+struct NetworkListView: View {
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(UserSettingsManager.self) private var userSettingsManager
 
     @State private var searchText: String = ""
 
-    @State private var volumes: [VolumeDisplayModel] = []
+    @State private var networks: [NetworkDisplayModel] = []
     @State private var lastUpdated: Date? = nil
 
-    @State private var selections = Set<VolumeDisplayModel.ID>()
+    @State private var selections = Set<NetworkDisplayModel.ID>()
 
-    @State private var showLabelForVolume: VolumeDisplayModel?
-    @State private var showOptionForVolume: VolumeDisplayModel?
+    @State private var showLabelForNetwork: NetworkDisplayModel?
+    @State private var showOptionForNetwork: NetworkDisplayModel?
 
-    @State private var showInUseContainerForVolume: VolumeDisplayModel?
+    @State private var showInUseContainerForNetwork: NetworkDisplayModel?
 
-    @State private var showCreateVolumeView: Bool = false
+    @State private var showCreateNetworkView: Bool = false
 
     private var trimmedText: String {
         self.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var filteredVolumes: [VolumeDisplayModel] {
+    private var filteredNetworks: [NetworkDisplayModel] {
         if trimmedText.isEmpty {
-            return volumes
+            return networks
         }
-        let filtered = self.volumes.filter({
+        let filtered = self.networks.filter({
             $0.name.contains(trimmedText)
         })
 
@@ -45,13 +45,13 @@ struct VolumeListView: View {
         VStack(alignment: .leading, spacing: 24) {
             HStack(alignment: .lastTextBaseline) {
                 HStack {
-                    Text(DisplayCategory.volume.displayTitle)
+                    Text("Networks")
                         .font(.title2)
                         .fontWeight(.bold)
 
                     Button(
                         action: {
-                            showCreateVolumeView = true
+                            showCreateNetworkView = true
                         },
                         label: {
                             Image(systemName: "plus")
@@ -80,7 +80,7 @@ struct VolumeListView: View {
                         Button(
                             action: {
                                 Task {
-                                    await self.listVolumes()
+                                    await self.listNetworks()
                                 }
                             },
                             label: {
@@ -102,26 +102,26 @@ struct VolumeListView: View {
                 Spacer()
 
                 if !selections.isEmpty {
-                    let selectedVolumes = self.volumes.filter({
+                    let selectedNetworks = self.networks.filter({
                         self.selections.contains($0.id)
                     })
-                    let allDeletable = !selectedVolumes.contains(where: {
-                        $0.inUse
+                    let allDeletable = !selectedNetworks.contains(where: {
+                        $0.inUse || $0.isBuiltin
                     })
 
                     Button(
                         action: {
                             Task {
                                 self.applicationManager.showProgressView =
-                                    selectedVolumes.count > 1
+                                    selectedNetworks.count > 1
                                 do {
-                                    try await VolumeService.deleteVolumes(
-                                        selectedVolumes.map(\.volume),
+                                    try await NetworkService.deleteNetworks(
+                                        selectedNetworks.map(\.network),
                                         messageStreamContinuation:
                                             applicationManager
                                             .messageStreamContinuation
                                     )
-                                    await self.listVolumes()
+                                    await self.listNetworks()
                                     self.applicationManager.showProgressView =
                                         false
                                 } catch (let error) {
@@ -148,32 +148,29 @@ struct VolumeListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Table(
-                of: VolumeDisplayModel.self,
+                of: NetworkDisplayModel.self,
                 selection: $selections,
                 columns: {
 
-                    TableColumn(TableHelper.columnHeader("Name")) { volume in
-                        Text(
-                            volume.isAnonymous
-                                ? "\(volume.name) (anonymous)" : volume.name
-                        )
-                        .font(.headline)
-                        .lineLimit(1)
-                        .frame(height: 48)
+                    TableColumn(TableHelper.columnHeader("Name")) { network in
+                        Text(network.name)
+                            .font(.headline)
+                            .lineLimit(1)
+                            .frame(height: 48)
                     }
                     .width(min: 80, ideal: 80)
 
-                    TableColumn(TableHelper.columnHeader("Type")) { volume in
-                        Text(volume.volumeType.rawValue)
+                    TableColumn(TableHelper.columnHeader("Mode")) { network in
+                        Text(network.mode.rawValue)
                     }
                     .width(80)
 
-                    TableColumn(TableHelper.columnHeader("State")) { volume in
+                    TableColumn(TableHelper.columnHeader("State")) { network in
                         Group {
-                            if volume.inUse {
+                            if network.inUse {
                                 Button(
                                     action: {
-                                        showInUseContainerForVolume = volume
+                                        showInUseContainerForNetwork = network
                                     },
                                     label: {
                                         Text("In use")
@@ -192,63 +189,53 @@ struct VolumeListView: View {
                     }
                     .width(64)
 
-                    TableColumn(TableHelper.columnHeader("Size")) { volume in
-                        if let size = volume.size {
-                            Text(size)
+                    TableColumn(TableHelper.columnHeader("IPv4 Subnet")) {
+                        network in
+                        Text(network.ipv4Subnet)
+                            .lineLimit(1)
+                    }
+                    .width(min: 100, ideal: 100, max: 160)
+
+                    TableColumn(TableHelper.columnHeader("IPv4 Gateway")) {
+                        network in
+                        Text(network.ipv4Gateway)
+                            .lineLimit(1)
+                    }
+                    .width(min: 100, ideal: 100, max: 160)
+
+                    TableColumn(TableHelper.columnHeader("IPv6 Subnet")) {
+                        network in
+                        if let ipv6Subnet = network.ipv6Subnet {
+                            Text(ipv6Subnet)
+                                .lineLimit(1)
                         } else {
-                            Text("(Not Specified")
+                            Text("(Not Specified)")
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .width(min: 80, ideal: 80, max: 120)
+                    .width(min: 100, ideal: 100, max: 160)
 
-                    TableColumn(TableHelper.columnHeader("Created")) { volume in
-                        Text(volume.created)
+                    TableColumn(TableHelper.columnHeader("Created")) {
+                        network in
+                        Text(network.created)
                     }
                     .width(min: 80, ideal: 80, max: 160)
 
-                    TableColumn(TableHelper.columnHeader("Driver")) { volume in
-                        Text(volume.driver)
+                    TableColumn(TableHelper.columnHeader("Plugin")) {
+                        network in
+                        Text(network.plugin)
                             .lineLimit(1)
                     }
-                    .width(64)
-
-                    TableColumn(TableHelper.columnHeader("Format")) { volume in
-                        Text(volume.format)
-                            .lineLimit(1)
-                    }
-                    .width(64)
-
-                    TableColumn(TableHelper.columnHeader("Source")) { volume in
-                        let source = volume.source
-                        let fileURL = URL(filePath: source)
-                        HStack(spacing: 8) {
-                            Text(source)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                                .frame(maxWidth: 200)
-
-                            Button {
-                                self.openFile(fileURL)
-                            } label: {
-                                Image(systemName: "arrow.right")
-                                    .contentShape(Rectangle())
-                                    .fontWeight(.semibold)
-                            }
-                            .buttonStyle(.link)
-                        }
-
-                    }
-                    .width(min: 160, ideal: 160, max: 240)
+                    .width(min: 80, ideal: 120, max: 180)
 
                     TableColumn(TableHelper.columnHeader("Label & Option")) {
-                        volume in
-                        let labels = volume.labels
-                        let options = volume.options
+                        network in
+                        let labels = network.labels
+                        let options = network.options
                         VStack(alignment: .leading, spacing: 8) {
                             Button(
                                 action: {
-                                    self.showLabelForVolume = volume
+                                    self.showLabelForNetwork = network
                                 },
                                 label: {
                                     Text("- Labels")
@@ -257,7 +244,7 @@ struct VolumeListView: View {
                             .disabled(labels.isEmpty)
                             Button(
                                 action: {
-                                    self.showOptionForVolume = volume
+                                    self.showOptionForNetwork = network
                                 },
                                 label: {
                                     Text("- Options")
@@ -269,8 +256,10 @@ struct VolumeListView: View {
                     }
                     .width(120)
 
-                    TableColumn(TableHelper.columnHeader("Actions")) { volume in
+                    TableColumn(TableHelper.columnHeader("Actions")) {
+                        network in
 
+                        let deleteDisabled = network.inUse || network.isBuiltin
                         HStack(spacing: 12) {
                             Button(
                                 action: {
@@ -278,14 +267,14 @@ struct VolumeListView: View {
                                         self.applicationManager
                                             .showProgressView = true
                                         do {
-                                            try await VolumeService
-                                                .deleteVolumes(
-                                                    [volume.volume],
+                                            try await NetworkService
+                                                .deleteNetworks(
+                                                    [network.network],
                                                     messageStreamContinuation:
                                                         applicationManager
                                                         .messageStreamContinuation
                                                 )
-                                            await self.listVolumes()
+                                            await self.listNetworks()
                                             self.applicationManager
                                                 .showProgressView = false
                                         } catch (let error) {
@@ -299,12 +288,12 @@ struct VolumeListView: View {
                                     )
                                 }
                             )
-                            .disabled(volume.inUse)
+                            .disabled(deleteDisabled)
                             .buttonStyle(
                                 CustomButtonStyle(
                                     backgroundShape: .circle,
                                     backgroundColor: .red,
-                                    disabled: volume.inUse
+                                    disabled: deleteDisabled
                                 )
                             )
                         }
@@ -314,7 +303,7 @@ struct VolumeListView: View {
 
                 },
                 rows: {
-                    ForEach(filteredVolumes)
+                    ForEach(filteredNetworks)
                 }
             )
             .alternatingRowBackgrounds(.disabled)
@@ -323,11 +312,11 @@ struct VolumeListView: View {
                 content: {
                     if !self.applicationManager.isSystemRunning {
                         SystemStoppedView()
-                    } else if filteredVolumes.isEmpty {
+                    } else if filteredNetworks.isEmpty {
                         ContentUnavailableView(
                             trimmedText.isEmpty
-                                ? "No Volumes Found" : "No Matching Volumes",
-                            systemImage: DisplayCategory.image.icon
+                                ? "No Networks Found" : "No Matching Networks",
+                            systemImage: "network"
                         )
                     }
                 }
@@ -339,7 +328,7 @@ struct VolumeListView: View {
             initial: true,
             {
                 guard self.applicationManager.isSystemRunning else {
-                    self.volumes = []
+                    self.networks = []
                     self.lastUpdated = nil
                     return
                 }
@@ -347,32 +336,32 @@ struct VolumeListView: View {
                     guard self.lastUpdated == nil else {
                         return
                     }
-                    await self.listVolumes()
+                    await self.listNetworks()
                 }
             }
         )
         .sheet(
-            isPresented: $showCreateVolumeView,
+            isPresented: $showCreateNetworkView,
             onDismiss: {
                 Task {
-                    await self.listVolumes()
+                    await self.listNetworks()
                 }
             },
             content: {
-                CreateVolumeView()
+                CreateNetworkView()
             }
         )
         .sheet(
-            item: $showInUseContainerForVolume,
+            item: $showInUseContainerForNetwork,
             onDismiss: {
                 Task {
-                    await self.listVolumes()
+                    await self.listNetworks()
                 }
             },
-            content: { volume in
+            content: { network in
 
                 InUseContainersView(
-                    containers: volume.inUseContainers.map({
+                    containers: network.inUseContainers.map({
                         ContainerDisplayModel($0)
                     }),
                     updateContainer: { id in
@@ -381,41 +370,41 @@ struct VolumeListView: View {
                             id
                         )
                         guard
-                            let index = self.showInUseContainerForVolume?
+                            let index = self.showInUseContainerForNetwork?
                                 .inUseContainers.firstIndex(where: {
                                     $0.id == id
                                 })
                         else {
                             return
                         }
-                        self.showInUseContainerForVolume?.inUseContainers[
+                        self.showInUseContainerForNetwork?.inUseContainers[
                             index
                         ] = container
 
                     },
                     deleteContainer: { id in
-                        self.showInUseContainerForVolume?.inUseContainers
+                        self.showInUseContainerForNetwork?.inUseContainers
                             .removeAll(where: { $0.id == id })
                     }
                 )
             }
         )
         .sheet(
-            item: $showLabelForVolume,
-            content: { volume in
-                VolumeDetailOptionView(
-                    dictionary: volume.labels,
+            item: $showLabelForNetwork,
+            content: { network in
+                NetworkDetailOptionView(
+                    dictionary: network.labels,
                     title: "Metadata",
                     emptyText: "No Metadata Specified."
                 )
             }
         )
         .sheet(
-            item: $showOptionForVolume,
-            content: { volume in
-                VolumeDetailOptionView(
-                    dictionary: volume.options,
-                    title: "Driver Specific Options",
+            item: $showOptionForNetwork,
+            content: { network in
+                NetworkDetailOptionView(
+                    dictionary: network.options,
+                    title: "Network Options",
                     emptyText: "No Options Specified."
                 )
             }
@@ -423,15 +412,15 @@ struct VolumeListView: View {
 
     }
 
-    private func listVolumes() async {
+    private func listNetworks() async {
         do {
             let containers = try await ContainerService.listContainers()
-            let volumes = try await VolumeService.listVolumes()
-            let displayModels: [VolumeDisplayModel] = volumes.map({
-                VolumeDisplayModel($0, containers: containers)
+            let networks = try await NetworkService.listNetworks()
+            let displayModels: [NetworkDisplayModel] = networks.map({
+                NetworkDisplayModel($0, containers: containers)
             })
 
-            self.volumes = displayModels
+            self.networks = displayModels
             self.lastUpdated = Date()
 
         } catch (let error) {
@@ -439,16 +428,9 @@ struct VolumeListView: View {
         }
     }
 
-    private func openFile(_ url: URL) {
-        let _ = NSWorkspace.shared.selectFile(
-            url.absolutePath,
-            inFileViewerRootedAtPath: url.parentDirectory.absolutePath
-        )
-    }
-
 }
 
-private struct VolumeDetailOptionView: View {
+private struct NetworkDetailOptionView: View {
     var dictionary: [String: String]
     var title: String
     var emptyText: String

@@ -370,6 +370,55 @@ struct ContainerDetailView: View {
                     } header: {
                         sectionHeader(title: "Volumes", subtitle: nil)
                     }
+
+                    Spacer()
+                        .frame(height: 8)
+
+                    Section {
+                        let networks = container.container.configuration
+                            .networks
+                        let attachments = container.container.networks
+                        if networks.isEmpty {
+                            Text("No network attached")
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 16)
+
+                        }
+                        ForEach(0..<networks.count, id: \.self) { index in
+                            let network = networks[index]
+                            HStack {
+                                Text(network.network)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .frame(
+                                        width: self.leftColumnWidth,
+                                        alignment: .leading
+                                    )
+                                    .foregroundStyle(.secondary)
+
+                                if let attachment = attachments.first(where: {
+                                    $0.network == network.network
+                                }) {
+                                    Text(
+                                        "\(attachment.ipv4Address) (\(attachment.hostname))"
+                                    )
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                } else {
+                                    Text("(Not attached)")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                    } header: {
+                        sectionHeader(
+                            title: "Networks",
+                            subtitle: "IPv4-Address (Hostname)"
+                        )
+                    }
                 }
             )
             .scrollTargetLayout()

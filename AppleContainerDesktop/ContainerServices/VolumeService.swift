@@ -109,6 +109,9 @@ enum VolumeService {
                         )
                         return nil
                     } catch {
+                        if error.isResourceNotFound {
+                            return nil
+                        }
                         messageStreamContinuation?.yield(
                             "failed to delete container \(volume.id): \(error)"
                         )

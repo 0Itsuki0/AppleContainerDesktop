@@ -18,7 +18,7 @@ import Foundation
      var envFile: [String] = []
 
      // "Keep Stdin open even if not attached")
-     // var interactive = false
+      var interactive = false
 
      // Open a terminal with the process
       var tty = false

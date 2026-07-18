@@ -20,7 +20,7 @@ struct AppleContainerDesktopApp: App {
             "Apple Container Desktop",
             id: Self.dashboardWindowId,
             content: {
-                ContentView()
+                ComposeListView()
                     .environment(applicationManager)
                     .environment(userSettingsManager)
             }
@@ -28,6 +28,19 @@ struct AppleContainerDesktopApp: App {
         .defaultSize(width: 800, height: 520)
         .defaultPosition(.center)
         .windowResizability(.contentSize)
+
+        //        Window(
+        //            "Apple Container Desktop",
+        //            id: Self.dashboardWindowId,
+        //            content: {
+        //                ContentView()
+        //                    .environment(applicationManager)
+        //                    .environment(userSettingsManager)
+        //            }
+        //        )
+        //        .defaultSize(width: 800, height: 520)
+        //        .defaultPosition(.center)
+        //        .windowResizability(.contentSize)
 
         MenuBarExtra(
             content: {
@@ -52,4 +65,118 @@ struct AppleContainerDesktopApp: App {
         .windowResizability(.contentSize)
 
     }
+}
+
+struct TestView: View {
+    var (messageStream, messageStreamContinuation) = AsyncStream<String>
+        .makeStream()
+
+    var body: some View {
+        VStack {
+            Button(
+                action: {
+                    testExec()
+                },
+                label: {
+                    Text("test exec")
+                }
+            )
+
+            Button(
+                action: {
+                    testBuild()
+                },
+                label: {
+                    Text("Up compose")
+                }
+            )
+
+            Button(
+                action: {
+                    testdown(shouldRemove: false)
+                },
+                label: {
+                    Text("down compose")
+                }
+            )
+
+            Button(
+                action: {
+                    testdown(shouldRemove: true)
+                },
+                label: {
+                    Text("rm compose")
+                }
+            )
+
+        }
+        .task {
+            for await message in messageStream {
+                print(message)
+            }
+        }
+
+    }
+
+    func testExec() {
+        Task {
+            do {
+                let exitCode = try await ContainerService.executeCommand(
+                    on: "ComposeTest_redis",
+                    arguments: ["redis-cli", "ping"],
+                    processFlags: .init(),
+                    detach: false,
+                    onStdout: {
+                        print("output", $0)
+                    },
+                    onStderr: {
+                        print("error", $0)
+                    }
+                )
+                print("exitCode: \(exitCode, default: "nil")")
+            } catch (let error) {
+                print(error)
+            }
+        }
+    }
+
+    func testBuild() {
+        let baseURL = URL(
+            filePath: "/Users/itsuki/Desktop/ComposeTest/compose.yaml"
+        )
+
+        Task {
+            do {
+                let result = try await ComposeService.upCompose(
+                    baseURL,
+                    forceRebuild: false,
+                    forceRecreate: false,
+                    messageStreamContinuation: messageStreamContinuation
+                )
+                //                print(result.map({$0.key}))
+            } catch (let error) {
+                print(error)
+            }
+        }
+    }
+
+    func testdown(shouldRemove: Bool) {
+        let baseURL = URL(
+            filePath: "/Users/itsuki/Desktop/ComposeTest/compose.yaml"
+        )
+
+        Task {
+            do {
+                try await ComposeService.downCompose(
+                    baseURL,
+                    shouldRemove: shouldRemove,
+                    messageStreamContinuation: messageStreamContinuation
+                )
+                //                print(result.map({$0.key}))
+            } catch (let error) {
+                print(error)
+            }
+        }
+    }
+
 }

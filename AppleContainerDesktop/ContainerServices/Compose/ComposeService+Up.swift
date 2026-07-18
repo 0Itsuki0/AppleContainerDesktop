@@ -5,14 +5,19 @@
 //  Created by Itsuki on 2026/07/12.
 //
 
+import ArgumentParser
 import ContainerAPIClient
 import ContainerResource
+import ContainerXPC
+import Containerization
 import ContainerizationError
 import ContainerizationExtras
 internal import ContainerizationOCI
 import ContainerizationOS
 import DockerComposeParser
 import Foundation
+import NIOCore
+import NIOPosix
 
 extension ComposeService {
 
@@ -29,6 +34,8 @@ extension ComposeService {
     // 1. When you run a command to decrease the replica count, Docker Compose performs an immediate state reconciliation:Calculates the Difference: It looks at the host and sees 3 running containers (web-1, web-2, web-3), but notes your new command specifies a target count of 1.
     // 2. Gracefully Stops Them: It selects the extra 2 containers (typically the newest ones created) and sends them a termination signal (SIGTERM) to stop the application gracefully.
     // 3. Instantly Deletes Them: Once stopped, Docker Compose automatically deletes and removes those two container processes from the engine storage.
+    //
+    // Returning: ServiceName: List of containers created for the service
     static func upCompose(
         _ baseCompose: URL,
         additionalComposes: [URL] = [],
@@ -49,7 +56,7 @@ extension ComposeService {
         // effect volume and network
         forceRecreate: Bool,
         messageStreamContinuation: AsyncStream<String>.Continuation?
-    ) async throws -> [ContainerSnapshot] {
+    ) async throws -> [String: [ContainerSnapshot]] {
         let projectDirectory =
             projectDirectory ?? baseCompose.deletingLastPathComponent()
 
@@ -71,8 +78,7 @@ extension ComposeService {
         messageStreamContinuation?.yield(
             "Building compose: \(projectName)..."
         )
-
-        let selectedServices = selectServices(
+        let selectedServices = try selectServices(
             compose: compose,
             requestedServices: requestedServices,
             requestedProfiles: requestedProfiles,
@@ -82,16 +88,17 @@ extension ComposeService {
             "Building \(selectedServices.count) services..."
         )
 
-        let networks = compose.networks?.mapValues({$0 ?? Network()}) ?? [:]
-        let volumes = compose.volumes?.mapValues({$0 ?? Volume()}) ?? [:]
-        let secrets = compose.secrets?.mapValues({$0 ?? Secret()}) ?? [:]
+        let networks = compose.networks?.mapValues({ $0 ?? Network() }) ?? [:]
+        let volumes = compose.volumes?.mapValues({ $0 ?? Volume() }) ?? [:]
+        let secrets = compose.secrets?.mapValues({ $0 ?? Secret() }) ?? [:]
 
-        var containersBuilt: [ContainerSnapshot] = []
+        var containersBuilt: [String: [ContainerSnapshot]] = [:]
 
-        try await withThrowingTaskGroup(of: [ContainerSnapshot].self) { group in
+        try await withThrowingTaskGroup(of: (String, [ContainerSnapshot]).self)
+        { group in
             for (serviceName, service) in selectedServices {
                 group.addTask {
-                    return try await resolveServiceContainers(
+                    let container = try await resolveServiceContainers(
                         service,
                         serviceName: serviceName,
                         networks: networks,
@@ -101,11 +108,12 @@ extension ComposeService {
                         rebuildImage: forceRebuild,
                         rebuildOtherResource: forceRecreate
                     )
+                    return (serviceName, container)
                 }
             }
 
             for try await result in group {
-                containersBuilt.append(contentsOf: result)
+                containersBuilt[result.0] = result.1
             }
         }
 
@@ -113,20 +121,280 @@ extension ComposeService {
             "Finish building \(containersBuilt.count) containers..."
         )
 
-        // TODO: - nest start service (containers) in order based on the depends_on field
+        messageStreamContinuation?.yield(
+            "Starting containers..."
+        )
+
+        // start service (containers) in order based on the depends_on field
+        try await self.startServices(
+            projectName: projectName,
+            selectedServices: selectedServices,
+            containerCreated: containersBuilt,
+            messageStreamContinuation: messageStreamContinuation
+        )
+
+        messageStreamContinuation?.yield(
+            "Compose up!"
+        )
 
         return containersBuilt
     }
 
-    func startServices() async throws {
+    private static func startServices(
+        projectName: String,
+        selectedServices: [(serviceName: String, service: Service)],
+        containerCreated: [String: [ContainerSnapshot]],
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        let sortedStages = try topoSortConfiguredServices(selectedServices)
 
+        messageStreamContinuation?.yield(
+            "Stopping running containers..."
+        )
+
+        // NOTE: not stopping all containers here at once because they need to be stopped in the opposite order
+        try await self.downServices(
+            projectName: projectName,
+            selectedServices: selectedServices,
+            containersCreated: containerCreated.mapValues({ $0.map(\.id) }),
+            shouldDelete: false,
+            messageStreamContinuation: nil
+        )
+
+        for stage in sortedStages {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for (serviceName, service, condition) in stage {
+                    messageStreamContinuation?.yield(
+                        "Starting containers for \(serviceName)..."
+                    )
+
+                    for var container in containerCreated[serviceName] ?? [] {
+                        // since we have called downServices above, we need to manually set this to `.stopped`
+                        // so that the `if container.status == .running` check in `ContainerService.startContainer` won't cause early return and fail to actually start the container
+                        container.status = .stopped
+                        group.addTask {
+                            // start container detached
+                            let exitCode =
+                                try await ContainerService.startContainer(
+                                    container,
+                                    attachContainerStdout: false,
+                                    attachContainerStdIn: false,
+                                    messageStreamContinuation: nil
+                                )
+
+                            messageStreamContinuation?.yield(
+                                "Container started with exit code \(exitCode, default: "(unknown)")..."
+                            )
+
+                            // wait for depend on condition before returning
+                            try await waitForCondition(
+                                condition,
+                                containerID: container.id,
+                                exitCode: exitCode,
+                                service: service,
+                                messageStreamContinuation:
+                                    messageStreamContinuation
+                            )
+                            return
+                        }
+                    }
+
+                }
+
+                try await group.waitForAll()
+            }
+        }
+    }
+
+    private static func waitForCondition(
+        _ condition: Service.DependencyCondition?,
+        containerID: ContainerSnapshotID,
+        exitCode: Int32?,
+        service: Service,
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        guard let condition else { return }
+
+        messageStreamContinuation?.yield(
+            "Waiting for \(condition) on \(containerID)..."
+        )
+
+        switch condition {
+        case .service_started:
+            try await waitForStart(
+                containerID,
+                exitCode: exitCode,
+                hasToComplete: false
+            )
+        case .service_healthy:
+            try await waitForHealthCheck(
+                containerID,
+                exitCode: exitCode,
+                healthCheckConfiguration: service.healthcheck
+            )
+        case .service_completed_successfully:
+            try await waitForStart(
+                containerID,
+                exitCode: exitCode,
+                hasToComplete: true
+            )
+        }
+
+        messageStreamContinuation?.yield(
+            "\(condition) for \(containerID) met!"
+        )
+    }
+
+    private static func waitForHealthCheck(
+        _ containerId: ContainerSnapshotID,
+        exitCode: Int32?,
+        healthCheckConfiguration: Service.Healthcheck?
+    )
+        async throws
+    {
+        try await waitForStart(
+            containerId,
+            exitCode: exitCode,
+            hasToComplete: false
+        )
+
+        if exitCode != nil {
+            throw ContainerizationError(
+                .invalidState,
+                message: "Container is stopped before health check."
+            )
+        }
+
+        guard let healthCheckConfiguration else { return }
+        guard !healthCheckConfiguration.isDisabled else { return }
+
+        guard let args = healthCheckConfiguration.execArguments else {
+            return
+        }
+        let retries = max(healthCheckConfiguration.retries ?? 3, 1)
+        let interval = Service.Healthcheck.parseDuration(
+            healthCheckConfiguration.interval,
+            default: 30
+        )
+        let startPeriod = Service.Healthcheck.parseDuration(
+            healthCheckConfiguration.start_period,
+            default: 0
+        )
+        if startPeriod > 0 {
+            try await Task.sleep(
+                nanoseconds: UInt64(startPeriod * 1_000_000_000)
+            )
+        }
+
+        for attempt in 1...retries {
+            do {
+                let exitCode = try await ContainerService.executeCommand(
+                    on: containerId,
+                    arguments: args,
+                    processFlags: .init(),
+                    detach: false,
+                    onStdout: nil,
+                    onStderr: { error in
+                        print("Std Error on healthcheck: \(error)")
+                    }
+                )
+                if let exitCode, ArgumentParser.ExitCode(exitCode) == .success {
+                    return
+                }
+            } catch {
+                // not throwing here as we are retrying.
+                print(
+                    "Error executing command on attempt: \(attempt). Error: \(error)."
+                )
+            }
+            if attempt < retries {
+                try await Task.sleep(
+                    nanoseconds: UInt64(interval * 1_000_000_000)
+                )
+            }
+        }
+
+        throw ContainerizationError(
+            .invalidState,
+            message: "Healthcheck failed for \(containerId)."
+        )
+    }
+
+    // assume container starts detached
+    // hasToComplete: false for `service_started`, true for `service_completed_successfully`
+    private static func waitForStart(
+        _ containerId: ContainerSnapshotID,
+        timeoutMs: TimeInterval = 10_000,
+        exitCode: Int32?,
+        hasToComplete: Bool
+    ) async throws {
+        var elapsed: TimeInterval = 0
+        let waitInterval: TimeInterval = 10
+        while true {
+            try await Task.sleep(for: .milliseconds(waitInterval))
+            do {
+                let container = try await ContainerService.getContainer(
+                    containerId
+                )
+
+                if !hasToComplete {
+                    if container.status == .running {
+                        return
+                    }
+                }
+
+                if container.status == .stopped {
+                    var resolvedExitCode: Int32
+                    if let exitCode {
+                        resolvedExitCode = exitCode
+                    } else {
+                        resolvedExitCode = try await waitForExit(
+                            containerId
+                        )
+                    }
+                    guard ArgumentParser.ExitCode(resolvedExitCode) == .success
+                    else {
+                        throw ContainerizationError(
+                            .invalidState,
+                            message:
+                                "Fail to wait for container \(containerId) to \(hasToComplete ? "complete" : "start") successfully."
+                        )
+                    }
+                    return
+                }
+            } catch {
+                // not throwing here as we are still waiting.
+            }
+
+            if elapsed > timeoutMs {
+                throw ContainerizationError(
+                    .timeout,
+                    message:
+                        "Time out waiting for container \(containerId) to \(hasToComplete ? "complete" : "start") successfully."
+                )
+            }
+            elapsed += waitInterval
+            continue
+        }
+    }
+
+    private static func waitForExit(
+        _ containerId: ContainerSnapshotID
+    ) async throws -> Int32 {
+        let request = XPCMessage(route: .containerWait)
+        request.set(key: .id, value: containerId)
+        request.set(key: .processIdentifier, value: containerId)
+        let xpcClient = XPCClient(service: "com.apple.container.apiserver")
+        let response = try await xpcClient.send(request)
+        let code = response.int64(key: .exitCode)
+        return Int32(code)
     }
 
     // get or create container
-    static func resolveServiceContainers(
+    private static func resolveServiceContainers(
         _ service: Service,
         serviceName: String,
-        networks: [String: Network],
+        networks: [String: DockerComposeParser.Network],
         volumes: [String: Volume],
         secrets: [String: Secret],
         projectName: String,
@@ -137,7 +405,7 @@ extension ComposeService {
         let count = service.deploy?.replicas ?? 1
         // Compose does not scale a service beyond one container if the Compose file specifies a container_name. Attempting to do so results in an error.
         let container_name = service.container_name
-        if let container_name, count > 1 {
+        if container_name != nil, count > 1 {
             throw ContainerizationError(
                 .invalidArgument,
                 message: "Container with explicit name cannot be scaled."
@@ -176,7 +444,8 @@ extension ComposeService {
                 explicit: container_name,
                 projectName: projectName,
                 serviceName: serviceName,
-                index: index
+                index: index,
+                total: count
             )
         })
 
@@ -196,15 +465,16 @@ extension ComposeService {
         let baseManagement = ContainerManagement(
             entryPoint: service.entrypoint?.joined(separator: " "),
             virtualFileSystem: [],
-            volumes: try await service.resolveVolumes(
+            volumes: try await resolveServiceVolumes(
+                service,
                 shouldRebuild: rebuildOtherResource,
                 topLevelVolume: volumes
             ),
             publishPorts: service.ports?.map(\.publishPort).removeNilValue()
                 ?? [],
             publishSockets: [],
-            temporaryFileSystem: service.resolveTmpfs(),
-            // NOTE: name to be update for each contianer
+            temporaryFileSystem: resolveServiceTmpfs(service),
+            // NOTE: name to be update for each container
             name: "",
             remove: false,
             platform: nil,
@@ -331,23 +601,11 @@ extension ComposeService {
         }
     }
 
-    static func containerName(
-        explicit: String?,
-        projectName: String,
-        serviceName: String,
-        index: Int
-    ) -> String {
-        if let explicit {
-            return explicit
-        }
-        return "\(projectName)_\(serviceName)_\(index)"
-    }
-
     // <name>[,mac=XX:XX:XX:XX:XX:XX][,mtu=VALUE]
     // ex: default,mac=02:42:ac:11:00:02
-    static func resolveContainerNetworks(
+    private static func resolveContainerNetworks(
         service: Service,
-        networks: [String: Network],
+        networks: [String: DockerComposeParser.Network],
         shouldRebuild: Bool,
     ) async throws -> [String] {
         guard let serviceNetworks = service.networks else {
@@ -388,61 +646,13 @@ extension ComposeService {
         return strings
     }
 
-}
-
-extension Network {
-    var mtu: String? {
-        return self.driver_opts?["com.docker.network.driver.mtu"] ?? nil
-    }
-
-}
-
-extension Service.Platform {
-    var containerPlatform: ContainerizationOCI.Platform {
-        Platform(
-            arch: self.arch ?? "",
-            os: self.os,
-            variant: self.variant
-        )
-    }
-}
-
-extension Service {
-    // The network with the highest gw_priority is selected as the default gateway for the service container.
-    // If unspecified, the default value is 0.
-    var defaultNetwork: (String, Network?)? {
-        guard let networks = self.networks else {
-            return nil
-        }
-        let sorted = networks.map({ ($0.key, $0.value) }).sorted(by: {
-            ($0.1?.gw_priority ?? 0) > ($1.1?.gw_priority ?? 0)
-        })
-        return sorted.first
-    }
-
-    var virtualization: Bool {
-        guard
-            let device = self.deploy?.resources?.reservations?.devices?.first(
-                where: { $0.options?["virtualization"] != nil })
-        else {
-            return false
-        }
-
-        guard let virtualization = device.options?["virtualization"],
-            let virtualization
-        else {
-            return false
-        }
-
-        return Bool(virtualization) ?? false
-    }
-
     // get or create volumes used by the service
-    func resolveVolumes(
+    private static func resolveServiceVolumes(
+        _ service: Service,
         shouldRebuild: Bool,
         topLevelVolume: [String: DockerComposeParser.Volume]
     ) async throws -> [Filesystem] {
-        guard let volumes = self.volumes else {
+        guard let volumes = service.volumes else {
             return []
         }
 
@@ -552,7 +762,6 @@ extension Service {
                         }
 
                     } catch (let error) {
-
                         return (
                             nil,
                             "\(volume.source ?? volume.target): \(error)"
@@ -583,8 +792,9 @@ extension Service {
         return resolvedResult
     }
 
-    func resolveTmpfs() -> [Filesystem] {
-        guard let tmpfs = self.tmpfs else {
+    private static func resolveServiceTmpfs(_ service: Service) -> [Filesystem]
+    {
+        guard let tmpfs = service.tmpfs else {
             return []
         }
         return tmpfs.map({
@@ -598,86 +808,5 @@ extension Service {
                 }) ?? []
             )
         })
-    }
-
-}
-
-extension VolumeConfiguration {
-    //    var fileSystemVolume: Filesystem {
-    //        return Filesystem.volume(
-    //            name: self.name,
-    //            format: self.format,
-    //            source: self.source,
-    //            destination: self.destination,
-    //            options: self.options
-    //        )
-    //    }
-}
-extension Service.Volume {
-    func resolve(topLevelVolumes: [VolumeConfiguration]) -> [Filesystem] {
-
-        return []
-    }
-}
-
-extension Service.Port {
-    var publishPort: PublishPort? {
-        // published: Host port or range, e.g. "8080" or "8080-8090". Nil = Docker picks a random host port.
-        guard let parsedPort = self.parsedPort else { return nil }
-        guard let ipV4 = try? IPv4Address(self.host_ip ?? "0.0.0.0") else {
-            return nil
-        }
-
-        // HOST is [IP:](port | range) (optional). If it is not set, it binds to all network interfaces (0.0.0.0).
-        // PROTOCOL restricts ports to a specified protocol either tcp or udp(optional). Default is tcp.
-        return try? PublishPort(
-            hostAddress: IPAddress.v4(ipV4),
-            hostPort: parsedPort.hostPort,
-            containerPort: parsedPort.containerPort,
-            proto: self.protocol?.publishProtocol ?? .tcp,
-            count: parsedPort.count
-        )
-
-    }
-
-    var parsedPort: (hostPort: UInt16, containerPort: UInt16, count: UInt16)? {
-        func parseRange(_ s: String) -> (UInt16, UInt16)? {
-            if let dash = s.firstIndex(of: "-") {
-                guard let start = UInt16(s[s.startIndex..<dash]),
-                    let end = UInt16(s[s.index(after: dash)...]),
-                    end >= start
-                else { return nil }
-                return (start, UInt16(end - start + 1))
-            } else {
-                guard let p = UInt16(s) else { return nil }
-                return (p, 1)
-            }
-        }
-
-        guard let (containerPort, containerCount) = parseRange(target) else {
-            return nil
-        }
-
-        guard let published = published else {
-            // No published port specified — Docker assigns a random host port.
-            return (0, containerPort, containerCount)
-        }
-
-        guard let (hostPort, hostCount) = parseRange(published),
-            hostCount == containerCount
-        else { return nil }
-
-        return (hostPort, containerPort, hostCount)
-    }
-}
-
-extension Service.PortProtocol {
-    var publishProtocol: PublishProtocol {
-        switch self {
-        case .tcp:
-            return .tcp
-        case .udp:
-            return .udp
-        }
     }
 }

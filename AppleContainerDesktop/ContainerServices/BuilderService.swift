@@ -80,7 +80,6 @@ enum BuilderService {
             let memChanged = existingResources.memoryInBytes != memory
             let envChanged = existingManagedEnv != targetEnvVars
 
-
             switch existingContainer.status {
             case .running:
                 guard imageChanged || cpuChanged || memChanged || envChanged else {

@@ -456,23 +456,6 @@ enum ImageService {
             )
         }
     }
-    //    static func getImage(_ name: String) async throws
-    //        -> ClientImage
-    //    {
-    //        let containerSystemConfig: ContainerSystemConfig =
-    //            try await Application.loadContainerSystemConfig()
-    //        let result = try await ClientImage.get(
-    //            names: [name],
-    //            containerSystemConfig: containerSystemConfig
-    //        )
-    //        guard let first = result.images.first else {
-    //            throw ContainerizationError(
-    //                .notFound,
-    //                message: "image not found: \(name)"
-    //            )
-    //        }
-    //        return first
-    //    }
 
     static func deleteImages(
         _ images: [String],
@@ -522,6 +505,9 @@ enum ImageService {
                     "Image deleted: \(image.reference)"
                 )
             } catch (let error) {
+                if error.isResourceNotFound {
+                    continue
+                }
                 messageStreamContinuation?.yield(
                     "failed to delete image \(image.reference): \(error)"
                 )
