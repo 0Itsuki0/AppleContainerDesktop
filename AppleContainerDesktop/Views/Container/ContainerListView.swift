@@ -31,9 +31,9 @@ struct ContainerListView: View {
                 ? containers.filter({ $0.status == .running }) : containers
         }
         let filtered = self.containers.filter({
-            $0.name.contains(trimmedText) == true
-                || $0.imageName.contains(trimmedText)
-                || $0.ports.contains(trimmedText) == true
+            $0.name.localizedCaseInsensitiveContains(trimmedText) == true
+                || $0.imageName.localizedCaseInsensitiveContains(trimmedText)
+                || $0.ports.localizedCaseInsensitiveContains(trimmedText) == true
         })
 
         return runningContainerOnly
@@ -233,9 +233,14 @@ struct ContainerListView: View {
 
                     TableColumn(TableHelper.columnHeader("Port(s)")) {
                         container in
-                        Text(container.ports)
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
+                        if container.ports.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Text("None")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(container.ports)
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     .width(min: 120, ideal: 120, max: 160)
 
@@ -246,8 +251,8 @@ struct ContainerListView: View {
                                 separator: "\n"
                             )
                         )
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .width(min: 120, ideal: 120, max: 160)
 
@@ -407,7 +412,6 @@ struct ContainerListView: View {
                                             applicationManager.error = error
                                         }
                                     }
-
                                 },
                                 label: {
                                     TableHelper.actionImage(
@@ -501,16 +505,10 @@ struct ContainerListView: View {
     private func listContainers() async {
         do {
             self.containers = (try await ContainerService.listContainers()).map(
-                { ContainerDisplayModel($0) })
+                { ContainerDisplayModel($0) }).sorted(by: { $0.name > $1.name })
             self.lastUpdated = Date()
         } catch (let error) {
             applicationManager.error = error
         }
     }
 }
-
-//#Preview {
-//    ContainerListView()
-//        .environment(ApplicationManager())
-//        .environment(UserSettingsManager())
-//}

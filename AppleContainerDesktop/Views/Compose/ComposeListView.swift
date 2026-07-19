@@ -5,7 +5,22 @@
 //  Created by Itsuki on 2026/07/18.
 //
 
+import ContainerResource
 import SwiftUI
+
+// TODO: handle application manager selected resource id change
+
+private struct ShowContainerViewParameter: Identifiable {
+    var id: String {
+        "\(compose.name)_\(serviceName)"
+    }
+    var compose: ComposeResource
+    var serviceName: String
+
+    var containerIds: [ContainerSnapshotID] {
+        compose.runningContainers[serviceName] ?? []
+    }
+}
 
 struct ComposeListView: View {
     @Environment(ApplicationManager.self) private var applicationManager
@@ -17,8 +32,11 @@ struct ComposeListView: View {
 
     @State private var selections = Set<ComposeResource.ID>()
 
-    @State private var showEditComposeResourceView: Bool = false
-    @State private var showComposeActionViewForType: ComposeActionType?
+    @State private var showEditComposeResourceView: ComposeResource? = nil
+    @State private var showAddComposeResourceView: Bool = false
+    @State private var showComposeActionView: ComposeAction?
+
+    @State private var showContainersForService: ShowContainerViewParameter?
 
     private var trimmedText: String {
         self.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -29,7 +47,7 @@ struct ComposeListView: View {
             return composes
         }
         let filtered = self.composes.filter({
-            $0.name.contains(trimmedText)
+            $0.name.localizedCaseInsensitiveContains(trimmedText)
         })
 
         return filtered
@@ -37,6 +55,7 @@ struct ComposeListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
+
             HStack(alignment: .lastTextBaseline) {
                 HStack {
                     Text("Composes")
@@ -45,7 +64,7 @@ struct ComposeListView: View {
 
                     Button(
                         action: {
-                            showEditComposeResourceView = true
+                            showAddComposeResourceView = true
                         },
                         label: {
                             Image(systemName: "plus")
@@ -73,7 +92,7 @@ struct ComposeListView: View {
 
                         Button(
                             action: {
-                                // TODO: refresh compose list
+                                self.listComposes()
                             },
                             label: {
                                 Image(
@@ -99,36 +118,114 @@ struct ComposeListView: View {
                 of: ComposeResource.self,
                 selection: $selections,
                 columns: {
-
                     TableColumn(TableHelper.columnHeader("Name")) { compose in
-                        Text(compose.name)
-                            .font(.headline)
-                            .lineLimit(1)
-                            .frame(height: 48)
+
+                        HStack {
+                            Text(compose.name)
+                                .font(.headline)
+                                .lineLimit(1)
+                                .frame(height: 48)
+                            if let error = compose.parsingError {
+                                Image(systemName: "exclamationmark.circle")
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.red)
+                                    .contentShape(.circle)
+                                    .toolTip {
+                                        Text(error.localizedCapitalized)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.red)
+                                            .multilineTextAlignment(.leading)
+                                            .fixedSize()
+                                            .padding(.all, 4)
+                                            .background(
+                                                RoundedRectangle(
+                                                    cornerRadius: 4
+                                                ).fill(.background)
+                                            )
+                                            .offset(x: 120)
+                                            .offset(y: -20)
+                                            .zIndex(.greatestFiniteMagnitude)
+                                    }
+                            }
+                        }
                     }
                     .width(min: 80, ideal: 80)
 
-                    TableColumn(TableHelper.columnHeader("Compose Path")) {
+                    TableColumn(TableHelper.columnHeader("Base Compose")) {
                         compose in
-                        Text(compose.baseCompose.absolutePath)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        HStack {
+                            Text(compose.baseCompose.absolutePath)
+                                .lineLimit(1)
+                                .truncationMode(.head)
+
+                            Button {
+                                self.openFile(compose.baseCompose)
+                            } label: {
+                                Image(systemName: "arrow.right")
+                                    .contentShape(Rectangle())
+                                    .fontWeight(.semibold)
+                            }
+                            .buttonStyle(.link)
+                        }
+                    }
+                    .width(min: 160, ideal: 160, max: 240)
+
+                    TableColumn(TableHelper.columnHeader("Project Directory")) {
+                        compose in
+                        HStack {
+                            if let directory = compose.projectDirectory {
+                                Text(directory.absolutePath)
+                                    .lineLimit(1)
+                                    .truncationMode(.head)
+                            } else {
+                                Text("Default (`.`)")
+                            }
+
+                            Button {
+                                self.openDirectory(
+                                    compose.projectDirectory
+                                        ?? compose.baseCompose.parentDirectory
+                                )
+                            } label: {
+                                Image(systemName: "arrow.right")
+                                    .contentShape(Rectangle())
+                                    .fontWeight(.semibold)
+                            }
+                            .buttonStyle(.link)
+                        }
                     }
                     .width(min: 160, ideal: 160, max: 240)
 
                     TableColumn(
                         TableHelper.columnHeader("Additional Compose")
                     ) { compose in
-                        if compose.additionalCompose.isEmpty {
-                            Text("(None)")
+                        if compose.additionalComposes.isEmpty {
+                            Text("None")
                                 .foregroundStyle(.secondary)
                         } else {
                             Text(
-                                compose.additionalCompose.map(\.absolutePath)
+                                compose.additionalComposes.map(\.absolutePath)
                                     .joined(separator: "\n")
                             )
                             .lineLimit(nil)
-                            .truncationMode(.middle)
+                            .truncationMode(.head)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .width(min: 160, ideal: 160, max: 240)
+
+                    TableColumn(
+                        TableHelper.columnHeader("Env Files")
+                    ) { compose in
+                        if compose.additionalComposes.isEmpty {
+                            Text("Default (`.env`)")
+                        } else {
+                            Text(
+                                compose.additionalComposes.map(\.absolutePath)
+                                    .joined(separator: "\n")
+                            )
+                            .lineLimit(nil)
+                            .truncationMode(.head)
                             .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -136,17 +233,39 @@ struct ComposeListView: View {
 
                     TableColumn(TableHelper.columnHeader("Running Services")) {
                         compose in
-                        let runningServices = compose.createdContainers.keys
-                            .sorted()
-                        if runningServices.isEmpty {
-                            Text("(None)")
+                        if compose.runningContainers.isEmpty {
+                            Text("None")
                                 .foregroundStyle(.secondary)
                         } else {
-                            Text(
-                                runningServices.joined(separator: "\n")
-                            )
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(
+                                    Array(
+                                        compose.runningContainers.keys.sorted()
+                                    ),
+                                    id: \.self
+                                ) { serviceName in
+                                    let count =
+                                        compose.runningContainers[serviceName]?
+                                        .count ?? 0
+                                    if count > 0 {
+                                        Button(
+                                            action: {
+                                                self.showContainersForService =
+                                                    .init(
+                                                        compose: compose,
+                                                        serviceName: serviceName
+                                                    )
+                                            },
+                                            label: {
+                                                Text(
+                                                    "- \(serviceName)\(count <= 1 ? "" : " ( x\(count) )")"
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            .buttonStyle(.link)
                         }
                     }
                     .width(min: 120, ideal: 120, max: 160)
@@ -157,7 +276,10 @@ struct ComposeListView: View {
                         HStack(spacing: 12) {
                             Button(
                                 action: {
-                                    showComposeActionViewForType = .up
+                                    showComposeActionView = .init(
+                                        compose: compose,
+                                        actionCategory: .up
+                                    )
                                 },
                                 label: {
                                     TableHelper.actionImage(
@@ -174,7 +296,10 @@ struct ComposeListView: View {
 
                             Button(
                                 action: {
-                                    showComposeActionViewForType = .down
+                                    showComposeActionView = .init(
+                                        compose: compose,
+                                        actionCategory: .down
+                                    )
                                 },
                                 label: {
                                     TableHelper.actionImage(
@@ -194,7 +319,44 @@ struct ComposeListView: View {
 
                             Button(
                                 action: {
-                                    // TODO: delete compose
+                                    showEditComposeResourceView = compose
+                                },
+                                label: {
+                                    TableHelper.actionImage(
+                                        systemName: "pencil"
+                                    )
+                                    .fontWeight(.heavy)
+                                }
+                            )
+                            .buttonStyle(
+                                CustomButtonStyle(
+                                    backgroundShape: .circle,
+                                    backgroundColor: .gray
+                                )
+                            )
+
+                            Button(
+                                action: {
+                                    Task {
+                                        self.applicationManager
+                                            .showProgressView = true
+
+                                        do {
+                                            try await ComposeService
+                                                .removeComposeResources(
+                                                    composes: [compose],
+                                                    messageStreamContinuation:
+                                                        applicationManager
+                                                        .messageStreamContinuation
+                                                )
+                                            self.listComposes()
+                                            self.applicationManager
+                                                .showProgressView = false
+                                        } catch (let error) {
+                                            applicationManager.error = error
+                                        }
+                                    }
+
                                 },
                                 label: {
                                     TableHelper.actionImage(
@@ -208,10 +370,11 @@ struct ComposeListView: View {
                                     backgroundColor: .red
                                 )
                             )
+
                         }
                         .padding(.horizontal, 8)
                     }
-                    .width(120)
+                    .width(160)
 
                 },
                 rows: {
@@ -233,19 +396,336 @@ struct ComposeListView: View {
                     }
                 }
             )
-
+        }
+        .onChange(of: self.applicationManager.pendingComposeAction, initial: true) {
+            guard let action = self.applicationManager.pendingComposeAction else {
+                return
+            }
+            
+            switch action.actionCategory {
+            case .up, .down:
+                self.showComposeActionView = action
+            case .inspect:
+                self.searchText = action.compose.name
+            }
+            
+            self.applicationManager.pendingComposeAction = nil
         }
         .sheet(
-            isPresented: $showEditComposeResourceView,
+            item: $showContainersForService,
+            onDismiss: {
+                self.showContainersForService = nil
+                self.listComposes()
+            },
+            content: { param in
+                ServiceContainersView(
+                    serviceName: param.serviceName,
+                    containerIDs: param.containerIds,
+                    downService: {
+                        try await self.handleAction(
+                            param.compose,
+                            service: param.serviceName,
+                            action: .down
+                        )
+                    },
+                    removeService: {
+                        try await self.handleAction(
+                            param.compose,
+                            service: param.serviceName,
+                            action: .remove
+                        )
+                    }
+                )
+            }
+        )
+        .sheet(
+            isPresented: $showAddComposeResourceView,
+            onDismiss: {
+                self.listComposes()
+            },
             content: {
                 EditComposeResourceView()
             }
         )
         .sheet(
-            item: $showComposeActionViewForType,
-            content: { type in
-                ComposeActionView(type: type)
+            item: $showEditComposeResourceView,
+            onDismiss: {
+                self.listComposes()
+            },
+            content: { resource in
+                EditComposeResourceView(composeResource: resource)
             }
         )
+        .sheet(
+            item: $showComposeActionView,
+            onDismiss: {
+                self.listComposes()
+            },
+            content: { action in
+                ComposeActionView(
+                    action: action
+                )
+            }
+        )
+        .onChange(
+            of: self.applicationManager.isSystemRunning,
+            initial: true,
+            {
+                guard self.applicationManager.isSystemRunning else {
+                    self.composes = []
+                    self.lastUpdated = nil
+                    return
+                }
+
+                Task {
+                    guard self.lastUpdated == nil else {
+                        return
+                    }
+                    self.listComposes()
+                }
+            }
+        )
+    }
+
+    private func listComposes() {
+        self.composes = ComposeService.listComposeResources()
+        self.lastUpdated = Date()
+    }
+
+    private func openFile(_ url: URL) {
+        let _ = NSWorkspace.shared.selectFile(
+            url.absolutePath,
+            inFileViewerRootedAtPath: url.parentDirectory.absolutePath
+        )
+    }
+
+    private func openDirectory(_ url: URL) {
+        let _ = NSWorkspace.shared.selectFile(
+            nil,
+            inFileViewerRootedAtPath: url.absolutePath
+        )
+    }
+
+    private func handleAction(
+        _ compose: ComposeResource,
+        service: String,
+        action: ComposeSubactionType
+    ) async throws {
+        switch action {
+        case .up:
+            return
+        case .build:
+            return
+        case .down:
+            try await self.downCompose(compose, service: service)
+        case .remove:
+            try await self.removeCompose(
+                compose,
+                service: service
+            )
+        }
+        try ComposeService.saveComposeResources([compose])
+    }
+
+    private func downCompose(_ compose: ComposeResource, service: String)
+        async throws
+    {
+        let removedServices = try await ComposeService.downCompose(
+            compose.baseCompose,
+            additionalComposes: compose.additionalComposes,
+            // envs for parsing vars in the compose files
+            envFiles: compose.envFiles,
+            projectDirectory: compose.projectDirectory,
+            nameOverride: compose.nameOverride,
+            // Services to build (builds all if omitted)
+            // Explicitly targeting a service by name is an absolute override.
+            // and always bypasses profile restrictions
+            requestedServices: [service],
+            // Specify a profile to enable. Can be repeated.
+            // Services without a 'profiles' key are always enabled;
+            // profiled services are enabled only when one of their profiles is active.
+            requestedProfiles: [],
+            startedContainers: compose.runningContainers,
+            messageStreamContinuation: applicationManager
+                .messageStreamContinuation
+        )
+
+        compose.onDown(downedServices: removedServices)
+        return
+    }
+
+    private func removeCompose(_ compose: ComposeResource, service: String)
+        async throws
+    {
+        let removedServices = try await ComposeService.removeCompose(
+            compose.baseCompose,
+            additionalComposes: compose.additionalComposes,
+            // envs for parsing vars in the compose files
+            envFiles: compose.envFiles,
+            projectDirectory: compose.projectDirectory,
+            nameOverride: compose.nameOverride,
+            // Services to build (builds all if omitted)
+            // Explicitly targeting a service by name is an absolute override.
+            // and always bypasses profile restrictions
+            requestedServices: [service],
+            // Specify a profile to enable. Can be repeated.
+            // Services without a 'profiles' key are always enabled;
+            // profiled services are enabled only when one of their profiles is active.
+            requestedProfiles: [],
+            startedContainers: compose.runningContainers,
+            messageStreamContinuation: applicationManager
+                .messageStreamContinuation
+        )
+        compose.onRemove(removedServices: removedServices)
+        return
+    }
+}
+
+private struct ServiceContainersView: View {
+    @Environment(ApplicationManager.self) private var applicationManager
+    @Environment(UserSettingsManager.self) private var userSettingsManager
+    @Environment(\.dismiss) private var dismiss
+
+    var serviceName: String
+    var containerIDs: [ContainerSnapshotID]
+    @State private var containers: [ContainerSnapshot] = []
+
+    var downService: () async throws -> Void
+    var removeService: () async throws -> Void
+
+    @State private var showProgressView: Bool = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(DisplayCategory.container.displayTitle)
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                if let errorMessage = self.errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            InUseContainersTable(
+                containers: containers.map({ ContainerDisplayModel($0) }),
+                // all actions will be disabled since the containers are used in compose
+                // therefore, no need to handle anything here.
+                updateContainer: { _ in },
+                deleteContainer: { _ in },
+                showComposeLink: false,
+                showProgressView: $showProgressView,
+                errorMessage: $errorMessage
+            )
+
+            HStack(spacing: 16) {
+                Button(
+                    action: {
+                        self.dismiss()
+                    },
+                    label: {
+                        Text("Cancel")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .secondary
+                    )
+                )
+
+                Button(
+                    action: {
+                        Task {
+                            self.showProgressView = true
+                            self.errorMessage = nil
+                            defer {
+                                self.showProgressView = false
+                            }
+                            do {
+                                try await self.downService()
+                                self.dismiss()
+                            } catch {
+                                self.errorMessage = error.localizedDescription
+                            }
+                        }
+                    },
+                    label: {
+                        Text("\(ComposeSubactionType.down.actionTitle) Service")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .blue
+                    )
+                )
+
+                Button(
+                    action: {
+                        Task {
+                            self.showProgressView = true
+                            self.errorMessage = nil
+                            defer {
+                                self.showProgressView = false
+                            }
+                            do {
+                                try await self.removeService()
+                                self.dismiss()
+                            } catch {
+                                self.errorMessage = error.localizedDescription
+                            }
+                        }
+                    },
+                    label: {
+                        Text("\(ComposeSubactionType.remove.actionTitle) Service")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .blue
+                    )
+                )
+            }
+
+            .frame(maxWidth: .infinity, alignment: .trailing)
+
+        }
+        .padding(.all, 24)
+        .frame(width: 560, height: 440)
+        .interactiveDismissDisabled()
+        .sheet(
+            isPresented: $showProgressView,
+            content: {
+                CustomProgressView()
+                    .environment(self.applicationManager)
+            }
+        )
+        .onDisappear {
+            self.showProgressView = false
+        }
+        .task {
+            await listContainers()
+        }
+    }
+
+    private func listContainers() async {
+        self.showProgressView = true
+        defer {
+            self.showProgressView = false
+        }
+        do {
+            self.containers = (try await ContainerService.listContainers())
+                .filter({ self.containerIDs.contains($0.id) })
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
     }
 }

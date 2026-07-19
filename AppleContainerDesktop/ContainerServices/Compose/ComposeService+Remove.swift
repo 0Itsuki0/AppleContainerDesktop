@@ -17,6 +17,7 @@ import Foundation
 extension ComposeService {
 
     // startedContainers and createdImages passed in in case compose.yaml is different from the previous up
+    // returning: removed services
     static func removeCompose(
         _ baseCompose: URL,
         additionalComposes: [URL] = [],
@@ -35,7 +36,7 @@ extension ComposeService {
         // Service name: container name (or id, same thing)
         startedContainers: [String: [ContainerSnapshotID]],
         messageStreamContinuation: AsyncStream<String>.Continuation?
-    ) async throws {
+    ) async throws -> [String] {
 
         return try await downCompose(
             baseCompose,

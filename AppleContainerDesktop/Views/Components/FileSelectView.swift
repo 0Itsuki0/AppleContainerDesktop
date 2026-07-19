@@ -147,7 +147,7 @@ struct MultiFileSelectView: View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading) {
                 if fileURLs.isEmpty {
-                    Text("(No files selected)")
+                    Text("( No files selected )")
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .padding(.horizontal, 8)
@@ -162,7 +162,33 @@ struct MultiFileSelectView: View {
                             .lineLimit(1)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(
+                                maxWidth: .infinity,
+                                maxHeight: .infinity,
+                                alignment: .leading
+                            )
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(.secondary.opacity(0.5))
+                                    .stroke(
+                                        .secondary.opacity(0.8),
+                                        style: .init(lineWidth: 1)
+                                    )
+                            )
+
+                        
+                        Button {
+                            fileURLs.removeAll(where: {$0 == fileURL})
+                        } label: {
+                            Image(systemName: "minus")
+                                .foregroundStyle(.red)
+                                .frame(maxHeight: .infinity)
+                                .contentShape(Circle())
+                                .fontWeight(.semibold)
+                        }
+                        .buttonBorderShape(.circle)
+                        .padding(.trailing, 8)
+                        
                         Button {
                             self.openFile(fileURL)
                         } label: {
@@ -202,12 +228,13 @@ struct MultiFileSelectView: View {
         ) { result in
             switch result {
             case .success(let urls):
-                self.fileURLs = urls.map({ url in
+                let newURLs = urls.map({ url in
                     if url.isFileURL {
                         return url
                     }
                     return URL(filePath: url.absolutePath)
                 })
+                self.fileURLs.append(contentsOf: newURLs)
 
             case .failure(let error):
                 self.errorMessage = "failed to import file: \(error)."

@@ -35,7 +35,7 @@ struct VolumeListView: View {
             return volumes
         }
         let filtered = self.volumes.filter({
-            $0.name.contains(trimmedText)
+            $0.name.localizedCaseInsensitiveContains(trimmedText)
         })
 
         return filtered
@@ -376,7 +376,6 @@ struct VolumeListView: View {
                         ContainerDisplayModel($0)
                     }),
                     updateContainer: { id in
-
                         let container = try await ContainerService.getContainer(
                             id
                         )
@@ -391,7 +390,6 @@ struct VolumeListView: View {
                         self.showInUseContainerForVolume?.inUseContainers[
                             index
                         ] = container
-
                     },
                     deleteContainer: { id in
                         self.showInUseContainerForVolume?.inUseContainers
@@ -431,7 +429,7 @@ struct VolumeListView: View {
                 VolumeDisplayModel($0, containers: containers)
             })
 
-            self.volumes = displayModels
+            self.volumes = displayModels.sorted(by: { $0.name > $1.name })
             self.lastUpdated = Date()
 
         } catch (let error) {
@@ -470,12 +468,12 @@ private struct VolumeDetailOptionView: View {
             KeyValuesDisplayView(
                 keyValues: keyValueModels,
                 emptyText: emptyText,
-                leftColumnWidth: 120
+                leftColumnWidth: 240
             )
 
         }
         .padding(.all, 24)
-        .frame(width: 320, alignment: .topLeading)
+        .frame(width: 450, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
         .overlay(
             alignment: .topTrailing,
@@ -499,7 +497,5 @@ private struct VolumeDetailOptionView: View {
             }
         )
         .interactiveDismissDisabled(false)
-
     }
-
 }

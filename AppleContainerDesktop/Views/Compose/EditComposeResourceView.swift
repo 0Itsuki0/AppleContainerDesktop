@@ -10,20 +10,23 @@ import UniformTypeIdentifiers
 
 struct EditComposeResourceView: View {
 
-    //    init(composeResource: ComposeResource ) {
-    //        self.baseCompose = composeResource.baseCompose
-    //        self.additionalComposes
-    //    }
+    init(composeResource: ComposeResource) {
+        self.isNew = false
+        self.existingCompose = composeResource
+    }
+
+    init() {
+        self.isNew = true
+        self.existingCompose = nil
+    }
 
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(\.dismiss) private var dismiss
 
-    var isNew: Bool = true
+    private var isNew: Bool
+    private var existingCompose: ComposeResource?
 
     @SwiftUI.State private var errorMessage: String?
-
-    // use a different one then applicationManager.showProgressView to show the progress view over this sheet
-    @SwiftUI.State private var showProgressView: Bool = false
 
     @SwiftUI.State private var showAdditionalSettings: Bool = false
 
@@ -33,6 +36,8 @@ struct EditComposeResourceView: View {
     @SwiftUI.State private var envFiles: [URL] = []
     @SwiftUI.State private var projectDirectory: URL?
     @SwiftUI.State private var nameOverride: String = ""
+
+    @SwiftUI.State private var conflictingName: String?
 
     var body: some View {
         ScrollView {
@@ -53,17 +58,14 @@ struct EditComposeResourceView: View {
                     FileSelectView(
                         fileURL: $baseCompose,
                         errorMessage: $errorMessage,
-                        allowedContentTypes: [.item]
+                        allowedContentTypes: [.yaml]
                     )
                     .onChange(
                         of: baseCompose,
                         {
-                            guard let url = baseCompose,
-                                projectDirectory == nil
-                            else {
-                                return
-                            }
-                            projectDirectory = url.parentDirectory
+                            self.additionalComposes.removeAll(where: {
+                                $0 == baseCompose
+                            })
                         }
                     )
                 }
@@ -100,16 +102,31 @@ struct EditComposeResourceView: View {
                             allowedContentTypes: [.yaml]
                         )
                         .onChange(of: additionalComposes) {
-                            // TODO: check duplication with main compose
+                            if let baseCompose,
+                                additionalComposes.contains(baseCompose)
+                            {
+                                self.errorMessage =
+                                    "\(baseCompose) is already used as the base compose."
+                                additionalComposes.removeAll(where: {
+                                    $0 == baseCompose
+                                })
+                            }
                         }
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Environment Files")
+                        Text(
+                            "⭑ If empty, `.env` will be used if exists in the project directory."
+                        )
+                        .lineLimit(1)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
                         MultiFileSelectView(
                             fileURLs: $envFiles,
                             errorMessage: $errorMessage,
-                            allowedContentTypes: [.fileURL]
+                            allowedContentTypes: [.text]
                         )
                     }
 
@@ -161,15 +178,7 @@ struct EditComposeResourceView: View {
                     )
 
                     Button(
-                        action: {
-                            guard self.baseCompose != nil else {
-                                self.errorMessage =
-                                    "Base compose file is required."
-                                return
-                            }
-
-                            // TODO: hook up compose resource logic
-                        },
+                        action: { self.handleSave() },
                         label: {
                             Text("Save")
                                 .padding(.horizontal, 2)
@@ -181,6 +190,7 @@ struct EditComposeResourceView: View {
                             backgroundColor: .blue
                         )
                     )
+                    .disabled(self.baseCompose == nil)
                 }
 
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -190,46 +200,80 @@ struct EditComposeResourceView: View {
             .padding(.all, 24)
             .scrollTargetLayout()
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .frame(width: 480)
-        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
-        .frame(maxHeight: 440)
-        .sheet(
-            isPresented: $showProgressView,
-            content: {
-                CustomProgressView()
-                    .environment(self.applicationManager)
+        .confirmationDialog(
+            "Name Conflict",
+            item: $conflictingName,
+            actions: { name in
+                // override (cancel action is provided by default)
+                Button(
+                    "Override",
+                    action: {
+                        self.handleSave(override: true)
+                    }
+                )
+            },
+            message: { name in
+                Text("Compose with name '\(name)' already exists.")
             }
         )
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        .frame(width: 560)
+        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
+        .frame(maxHeight: 440)
+        .onChange(of: self.existingCompose, initial: true) {
+            if let composeResource = existingCompose {
+                self.baseCompose = composeResource.baseCompose
+                self.additionalComposes = composeResource.additionalComposes
+                self.envFiles = composeResource.envFiles
+                self.projectDirectory = composeResource.projectDirectory
+                self.nameOverride = composeResource.nameOverride ?? ""
+            } else {
+                self.baseCompose = nil
+                self.additionalComposes = []
+                self.envFiles = []
+                self.projectDirectory = nil
+                self.nameOverride = ""
+            }
+        }
         .animation(.default, value: self.additionalComposes.count)
         .animation(.default, value: self.envFiles.count)
-        .onDisappear {
-            self.showProgressView = false
-        }
         .interactiveDismissDisabled()
-
     }
 
+    private func handleSave(override: Bool = false) {
+        guard let baseCompose else {
+            self.errorMessage =
+                "Base compose file is required."
+            return
+        }
+
+        let nameOverride =
+            self.nameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty
+            ? nil
+            : self.nameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        do {
+            let compose = ComposeResource(
+                baseCompose: baseCompose,
+                projectDirectory: projectDirectory,
+                additionalComposes: additionalComposes,
+                envFiles: envFiles,
+                nameOverride: nameOverride
+            )
+
+            if !override,
+                ComposeService.composeResourceExist(name: compose.name),
+                compose.name != existingCompose?.name
+            {
+                self.conflictingName = compose.name
+                return
+            }
+
+            try ComposeService.addComposeResources([compose])
+            self.dismiss()
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
 }
-//
-//struct FileListSelection: View {
-//    var title: String
-//    var addButtonTitle: String
-//    var files:
-//    var contentTypes: [UTType]
-//    var errorMessage: String
-//
-//    var body: some View {
-//        VStack(alignment: .leading, spacing: 8) {
-//
-//            MultiFileSelectView(fileURLs: files, errorMessage: .constant(nil), allowedContentTypes: <#T##[UTType]#>)
-//
-//            FileSelectView(
-//                fileURL: $file.url,
-//                errorMessage: $errorMessage,
-//                allowedContentTypes:contentTypes
-//            )
-//        }
-//
-//    }
-//}

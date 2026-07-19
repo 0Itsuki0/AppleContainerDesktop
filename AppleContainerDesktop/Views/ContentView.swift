@@ -43,7 +43,7 @@ struct ContentView: View {
                     }
                     .padding()
                     .buttonStyle(.plain)
-                    .navigationSplitViewColumnWidth(180)
+                    .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
                     .frame(maxHeight: .infinity, alignment: .topLeading)
                     .background(Color.gray.opacity(0.1))
 
@@ -74,7 +74,6 @@ struct ContentView: View {
                                 ContainerDetailView(containerID: containerID)
                             }
                         )
-
                     }
 
                 }

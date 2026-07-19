@@ -35,6 +35,10 @@ extension ComposeService {
     // 2. Gracefully Stops Them: It selects the extra 2 containers (typically the newest ones created) and sends them a termination signal (SIGTERM) to stop the application gracefully.
     // 3. Instantly Deletes Them: Once stopped, Docker Compose automatically deletes and removes those two container processes from the engine storage.
     //
+    // Additive action
+    // ie: if service A was started, and then B starts,
+    // both A and B will be running
+    //
     // Returning: ServiceName: List of containers created for the service
     static func upCompose(
         _ baseCompose: URL,
@@ -58,7 +62,7 @@ extension ComposeService {
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws -> [String: [ContainerSnapshot]] {
         let projectDirectory =
-            projectDirectory ?? baseCompose.deletingLastPathComponent()
+            projectDirectory ?? baseCompose.parentDirectory
 
         // all relative file path as well as any variables used in the YAML will be resolved
         let compose = try ComposeParser.loadComposes(
@@ -78,7 +82,7 @@ extension ComposeService {
         messageStreamContinuation?.yield(
             "Building compose: \(projectName)..."
         )
-        let selectedServices = try selectServices(
+        let selectedServices = try selectServicesForUpBuild(
             compose: compose,
             requestedServices: requestedServices,
             requestedProfiles: requestedProfiles,
@@ -106,7 +110,8 @@ extension ComposeService {
                         secrets: secrets,
                         projectName: projectName,
                         rebuildImage: forceRebuild,
-                        rebuildOtherResource: forceRecreate
+                        rebuildOtherResource: forceRecreate,
+                        messageStreamContinuation: messageStreamContinuation
                     )
                     return (serviceName, container)
                 }
@@ -156,7 +161,7 @@ extension ComposeService {
         try await self.downServices(
             projectName: projectName,
             selectedServices: selectedServices,
-            containersCreated: containerCreated.mapValues({ $0.map(\.id) }),
+            startedContainers: containerCreated.mapValues({ $0.map(\.id) }),
             shouldDelete: false,
             messageStreamContinuation: nil
         )
@@ -399,8 +404,10 @@ extension ComposeService {
         secrets: [String: Secret],
         projectName: String,
         rebuildImage: Bool,
-        rebuildOtherResource: Bool
+        rebuildOtherResource: Bool,
+        messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws -> [ContainerSnapshot] {
+        let recreateContainer = rebuildOtherResource || rebuildImage
 
         let count = service.deploy?.replicas ?? 1
         // Compose does not scale a service beyond one container if the Compose file specifies a container_name. Attempting to do so results in an error.
@@ -415,15 +422,18 @@ extension ComposeService {
         let image: String
         if service.build != nil {
             // docker
+            messageStreamContinuation?.yield("Building image for service: \(serviceName)...")
             let clientImage = try await buildService(
                 service,
                 serviceName: serviceName,
                 shouldRebuild: rebuildImage,
-                secrets: secrets
+                secrets: secrets,
+                messageStreamContinuation: messageStreamContinuation
             )
             image = clientImage.reference
         } else if let serviceImage = service.image {
             // remote
+            messageStreamContinuation?.yield("Pulling image for service: \(serviceName)...")
             try await ImageService.pullImage(
                 reference: serviceImage,
                 platform: service.platform?.containerPlatform
@@ -521,6 +531,8 @@ extension ComposeService {
         var resolvedResult: [ContainerSnapshot] = []
         var failures: [String] = []
 
+        messageStreamContinuation?.yield("Creating containers for \(serviceName)...")
+
         await withTaskGroup(
             of: (container: ContainerSnapshot?, error: String?).self
         ) { [baseManagement, resource] group in
@@ -529,7 +541,7 @@ extension ComposeService {
                     do {
                         if let existing = try await shouldCreateContainer(
                             containerName,
-                            shouldRecreate: rebuildImage  // container is based on image
+                            shouldRecreate: recreateContainer
                         ) {
                             return (existing, nil)
                         }

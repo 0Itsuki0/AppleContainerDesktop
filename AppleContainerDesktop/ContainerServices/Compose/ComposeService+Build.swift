@@ -33,10 +33,11 @@ extension ComposeService {
         // Services without a 'profiles' key are always enabled;
         // profiled services are enabled only when one of their profiles is active.
         requestedProfiles: [String] = [],
+        shouldRebuild: Bool,
         messageStreamContinuation: AsyncStream<String>.Continuation?
-    ) async throws -> (success: [ClientImage], failure: [String]) {
+    ) async throws {
         let projectDirectory =
-            projectDirectory ?? baseCompose.deletingLastPathComponent()
+            projectDirectory ?? baseCompose.parentDirectory
 
         // all relative file path as well as any variables used in the YAML will be resolved
         let compose = try ComposeParser.loadComposes(
@@ -69,26 +70,23 @@ extension ComposeService {
             "Building \(servicesToBuild.count) services..."
         )
 
-        let imageResponse = await buildServices(
+        let response = await buildServices(
             servicesToBuild,
             secrets: compose.secrets?.removeNilValue() ?? [:],
-            shouldRebuild: true,
+            shouldRebuild: shouldRebuild,
             messageStreamContinuation: messageStreamContinuation
         )
 
-        let imageResult: [ClientImage] = imageResponse.imageResult
-
-        let failedResource: [String] = imageResponse.failedResource
-
-        if failedResource.isEmpty {
-            messageStreamContinuation?.yield("Build complete")
-        } else {
-            messageStreamContinuation?.yield(
-                "Failed to build one or more resources. \n\(failedResource.joined(separator: "\n"))"
+        if !response.failedService.isEmpty {
+            throw ContainerizationError(
+                .internalError,
+                message:
+                    "Failed to build one or more services. \n\(response.failedService.joined(separator: "\n"))"
             )
         }
 
-        return (imageResult, failedResource)
+        messageStreamContinuation?.yield("Build complete!")
+        return
     }
 
     static func buildServices(
@@ -96,52 +94,49 @@ extension ComposeService {
         secrets: [String: Secret],
         shouldRebuild: Bool,
         messageStreamContinuation: AsyncStream<String>.Continuation?
-    ) async -> (imageResult: [ClientImage], failedResource: [String]) {
-        var imageResult: [ClientImage] = []
-        var failedResource: [String] = []
+    ) async -> (successService: [String], failedService: [String]) {
+        var success: [String] = []
+        var failed: [String] = []
 
         await withTaskGroup(
-            of: (image: ClientImage?, error: String?).self
+            of: (String, Bool).self
         ) { [servicesToBuild] group in
 
             for (serviceName, service) in servicesToBuild {
                 group.addTask { [serviceName, service] in
                     do {
                         messageStreamContinuation?.yield(
-                            "Building service \(serviceName)."
+                            "Building service \(serviceName)..."
                         )
 
-                        let image = try await buildService(
+                        let _ = try await buildService(
                             service,
                             serviceName: serviceName,
                             shouldRebuild: shouldRebuild,
                             secrets: secrets,
+                            messageStreamContinuation: servicesToBuild.count > 1
+                                ? nil : messageStreamContinuation
                         )
-                        return (image, nil)
+                        return (serviceName, true)
                     } catch (let error) {
                         messageStreamContinuation?.yield(
                             "failed to build service \(serviceName): \(error)"
                         )
-                        return (
-                            nil,
-                            "\(serviceName): \(error)"
-                        )
+                        return (serviceName, false)
                     }
                 }
             }
 
             for await result in group {
-                if let image = result.image {
-                    imageResult.append(image)
-                    continue
-                }
-                if let error = result.error {
-                    failedResource.append(error)
+                if result.1 {
+                    success.append(result.0)
+                } else {
+                    failed.append(result.0)
                 }
             }
         }
 
-        return (imageResult, failedResource)
+        return (success, failed)
     }
 
     static func buildNetworks(
@@ -211,6 +206,7 @@ extension ComposeService {
         serviceName: String,
         shouldRebuild: Bool,
         secrets: [String: Secret],
+        messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws -> ClientImage {
         guard let build = service.build else {
             throw ContainerizationError(
@@ -340,7 +336,7 @@ extension ComposeService {
                 .removeNilValue(),
             cacheOut: (build.cache_to ?? []).map(\.stringRepresentation)
                 .removeNilValue(),
-            messageStreamContinuation: nil
+            messageStreamContinuation: messageStreamContinuation
         )
 
         let image = try await ImageService.getImage(imageTag)
@@ -545,7 +541,7 @@ extension ComposeService {
     ) throws -> [(serviceName: String, service: Service)] {
         // service that is either part of the active profile or requested service
         let selectedNames = Set(
-            try selectServices(
+            try selectServicesForUpBuild(
                 compose: compose,
                 requestedServices: requestedServices,
                 requestedProfiles: requestedProfiles,

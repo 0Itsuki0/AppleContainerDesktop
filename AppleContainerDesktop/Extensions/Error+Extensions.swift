@@ -10,11 +10,15 @@ import Foundation
 
 nonisolated extension Error {
     var isResourceNotFound: Bool {
-        if let error = self as? ContainerizationError,
-            error.isCode(.notFound)
-        {
-            return true
+        if let error = self as? ContainerizationError {
+            if error.isCode(.notFound) {
+                return true
+            }
+            if error.cause?.isResourceNotFound == true {
+                return true
+            }
         }
+
         return false
     }
 }

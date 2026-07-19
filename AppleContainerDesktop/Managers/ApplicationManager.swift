@@ -90,6 +90,13 @@ class ApplicationManager {
     var selectedContainerID: ContainerSnapshotID?
     var refreshContainerNeeded: Bool = false
 
+    var pendingComposeAction: ComposeAction? {
+        didSet {
+            //            self.selectedCategory = .
+            // TODO: set selected category to be compose
+        }
+    }
+
     var showProgressView: Bool = false {
         didSet {
             if self.showProgressView {
@@ -108,6 +115,7 @@ class ApplicationManager {
         self.messageTask = Task {
             for await message in messageStream {
                 if !message.isEmpty {
+                    print(message)
                     self.progressMessage = message
                 }
             }

@@ -16,7 +16,7 @@ struct CustomProgressView: View {
             Text(applicationManager.progressMessage)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(nil)
         }
         .controlSize(.extraLarge)
         .padding(.all, 24)

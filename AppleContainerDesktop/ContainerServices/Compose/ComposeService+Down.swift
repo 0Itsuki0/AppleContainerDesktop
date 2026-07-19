@@ -17,6 +17,7 @@ import Foundation
 extension ComposeService {
 
     // startedContainers and createdImages passed in in case compose.yaml is different from the previous up
+    // returning: downed services
     static func downCompose(
         _ baseCompose: URL,
         additionalComposes: [URL] = [],
@@ -36,10 +37,10 @@ extension ComposeService {
         startedContainers: [String: [ContainerSnapshotID]] = [:],
         shouldRemove: Bool = false,
         messageStreamContinuation: AsyncStream<String>.Continuation?
-    ) async throws {
+    ) async throws -> [String] {
 
         let projectDirectory =
-            projectDirectory ?? baseCompose.deletingLastPathComponent()
+            projectDirectory ?? baseCompose.parentDirectory
 
         // all relative file path as well as any variables used in the YAML will be resolved
         let compose = try ComposeParser.loadComposes(
@@ -60,7 +61,7 @@ extension ComposeService {
             "Downing compose: \(projectName)..."
         )
 
-        let selectedServices = try selectServices(
+        let selectedServices = try selectServicesForDownRemove(
             compose: compose,
             requestedServices: requestedServices,
             requestedProfiles: requestedProfiles,
@@ -69,33 +70,16 @@ extension ComposeService {
         try await self.downServices(
             projectName: projectName,
             selectedServices: selectedServices,
-            containersCreated: startedContainers,
+            startedContainers: startedContainers,
             shouldDelete: shouldRemove,
             messageStreamContinuation: messageStreamContinuation
         )
 
-        let leftovers = startedContainers.filter({ serviceName, _ in
-            compose.services[serviceName] == nil
-        }).flatMap({ $0.value })
-
-        do {
-            try await ContainerService.stopContainers(
-                leftovers,
-                stopTimeoutSeconds: 5,
-                messageStreamContinuation: nil
-            )
-
-            if shouldRemove {
-                try await deleteContainers(Array(leftovers))
-            }
-        } catch {
-            // not throwing here as it is just a clean up (not requested by the user)
-            print("Error removing leftover containers: \(error).")
-        }
-
         messageStreamContinuation?.yield(
             "\(selectedServices.map(\.serviceName).joined(separator: ", ")) are \(shouldRemove ? "removed" : "stopped")."
         )
+
+        return selectedServices.map(\.serviceName)
     }
 
     // stopping containers in the opposite order as they have started,
@@ -103,12 +87,14 @@ extension ComposeService {
     static func downServices(
         projectName: String,
         selectedServices: [(serviceName: String, service: Service)],
-        containersCreated: [String: [ContainerSnapshotID]],
+        startedContainers: [String: [ContainerSnapshotID]],
         shouldDelete: Bool,
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws {
         let reversedStages = try topoSortConfiguredServices(selectedServices)
             .reversed()
+
+        let allContainers = try await ContainerService.listContainers()
 
         for stage in reversedStages {
             // NOTE: not use task group here as the services have to be stopped in the reverse order
@@ -126,24 +112,32 @@ extension ComposeService {
                         total: count
                     )
                 })
+
                 let allContainerNames = Array(
                     Set(containerNames).union(
-                        Set(containersCreated[serviceName] ?? [])
+                        Set(startedContainers[serviceName] ?? [])
                     )
-                )
-                try await ContainerService.stopContainers(
-                    allContainerNames,
-                    stopTimeoutSeconds: 5,
-                    messageStreamContinuation: nil
-                )
+                ).filter({ allContainers.map(\.id).contains($0) })
 
-                try await waitForStop(allContainerNames)
-
-                if shouldDelete {
-                    try await deleteContainers(allContainerNames)
-                    messageStreamContinuation?.yield(
-                        "service: \(serviceName) removed."
+                do {
+                    try await ContainerService.stopContainers(
+                        allContainerNames,
+                        stopTimeoutSeconds: 5,
+                        messageStreamContinuation: nil
                     )
+
+                    try await waitForStop(allContainerNames)
+
+                    if shouldDelete {
+                        try await deleteContainers(allContainerNames)
+                        messageStreamContinuation?.yield(
+                            "service: \(serviceName) removed."
+                        )
+                    }
+                } catch {
+                    if !error.isResourceNotFound {
+                        throw error
+                    }
                 }
             }
         }
@@ -180,6 +174,9 @@ extension ComposeService {
                 }
             } catch {
                 // not throwing here as we are still waiting.
+                if error.isResourceNotFound {
+                    return
+                }
             }
 
             if elapsed > timeoutMs {
@@ -194,7 +191,7 @@ extension ComposeService {
         }
     }
 
-    private static func deleteContainers(_ containers: [String]) async throws {
+    static func deleteContainers(_ containers: [String]) async throws {
         let containers = try await ContainerService.listContainers().filter({
             containers.contains($0.id)
         })

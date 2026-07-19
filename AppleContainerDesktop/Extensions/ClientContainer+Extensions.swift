@@ -17,9 +17,9 @@ extension ContainerSnapshot {
         return self.configuration.image.name
     }
     
-    var portsString: String? {
+    var portsString: String {
         if self.configuration.publishedPorts.isEmpty {
-            return nil
+            return ""
         }
         return self.configuration.publishedPorts.map(\.displayString).joined(separator: "\n")
     }

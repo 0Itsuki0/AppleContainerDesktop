@@ -324,7 +324,7 @@ struct CreateContainerView: View {
             .scrollTargetLayout()
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .frame(width: 480)
+        .frame(width: 560)
         .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
         .frame(maxHeight: 440)
         .sheet(

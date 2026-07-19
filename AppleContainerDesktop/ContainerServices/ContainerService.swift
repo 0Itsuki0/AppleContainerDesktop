@@ -474,8 +474,8 @@ nonisolated struct CustomProcessIO: Sendable {
 
     public let stdio: [FileHandle?]
 
-    //    public let console: Terminal?
-
+    // TODO: - (Future)
+    // add/change stdio to async streams to stream input and output
     public static func create(
         tty: Bool,
         interactive: Bool,
@@ -486,36 +486,7 @@ nonisolated struct CustomProcessIO: Sendable {
 
         var stdio = [FileHandle?](repeating: nil, count: 3)
 
-        let stdin: Pipe? = {
-            if !interactive {
-                return nil
-            }
-            return Pipe()
-        }()
-
-        if let stdin {
-            let pin = FileHandle.standardInput
-            let stdinOSFile = OSFile(fd: pin.fileDescriptor)
-            let pipeOSFile = OSFile(
-                fd: stdin.fileHandleForWriting.fileDescriptor
-            )
-            try stdinOSFile.makeNonBlocking()
-            nonisolated(unsafe) let buf = UnsafeMutableBufferPointer<UInt8>
-                .allocate(capacity: Int(getpagesize()))
-
-            pin.readabilityHandler = { handle in
-                Self.streamStdin(
-                    from: stdinOSFile,
-                    to: pipeOSFile,
-                    buffer: buf,
-                ) {
-                    pin.readabilityHandler = nil
-                    buf.deallocate()
-                    try? stdin.fileHandleForWriting.close()
-                }
-            }
-            stdio[0] = stdin.fileHandleForReading
-        }
+        let stdin: Pipe? = nil
 
         let stdout: Pipe? = {
             if detach {
@@ -623,137 +594,5 @@ nonisolated struct CustomProcessIO: Sendable {
         try stdin?.fileHandleForReading.close()
         try stdout?.fileHandleForWriting.close()
         try stderr?.fileHandleForWriting.close()
-    }
-
-    static func streamStdin(
-        from: OSFile,
-        to: OSFile,
-        buffer: UnsafeMutableBufferPointer<UInt8>,
-        onErrorOrEOF: () -> Void,
-    ) {
-        while true {
-            let (bytesRead, action) = from.read(buffer)
-            if bytesRead > 0 {
-                let view = UnsafeMutableBufferPointer(
-                    start: buffer.baseAddress,
-                    count: bytesRead
-                )
-
-                let (bytesWritten, _) = to.write(view)
-                if bytesWritten != bytesRead {
-                    onErrorOrEOF()
-                    return
-                }
-            }
-
-            switch action {
-            case .error(_), .eof, .brokenPipe:
-                onErrorOrEOF()
-                return
-            case .again:
-                return
-            case .success:
-                break
-            }
-        }
-    }
-}
-
-nonisolated
-    public struct OSFile: Sendable
-{
-    private let fd: Int32
-
-    public enum IOAction: Equatable {
-        case eof
-        case again
-        case success
-        case brokenPipe
-        case error(_ errno: Int32)
-    }
-
-    public init(fd: Int32) {
-        self.fd = fd
-    }
-
-    public init(handle: FileHandle) {
-        self.fd = handle.fileDescriptor
-    }
-
-    func makeNonBlocking() throws {
-        let flags = fcntl(fd, F_GETFL)
-        guard flags != -1 else {
-            throw POSIXError.fromErrno()
-        }
-
-        if fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1 {
-            throw POSIXError.fromErrno()
-        }
-    }
-
-    func write(_ buffer: UnsafeMutableBufferPointer<UInt8>) -> (
-        wrote: Int, action: IOAction
-    ) {
-        if buffer.count == 0 {
-            return (0, .success)
-        }
-
-        var bytesWrote: Int = 0
-        while true {
-            let n = Darwin.write(
-                self.fd,
-                buffer.baseAddress!.advanced(by: bytesWrote),
-                buffer.count - bytesWrote
-            )
-            if n == -1 {
-                if errno == EAGAIN || errno == EIO {
-                    return (bytesWrote, .again)
-                }
-                return (bytesWrote, .error(errno))
-            }
-
-            if n == 0 {
-                return (bytesWrote, .brokenPipe)
-            }
-
-            bytesWrote += n
-            if bytesWrote < buffer.count {
-                continue
-            }
-            return (bytesWrote, .success)
-        }
-    }
-
-    func read(_ buffer: UnsafeMutableBufferPointer<UInt8>) -> (
-        read: Int, action: IOAction
-    ) {
-        if buffer.count == 0 {
-            return (0, .success)
-        }
-
-        var bytesRead: Int = 0
-        while true {
-            let n = Darwin.read(
-                self.fd,
-                buffer.baseAddress!.advanced(by: bytesRead),
-                buffer.count - bytesRead
-            )
-            if n == -1 {
-                if errno == EAGAIN || errno == EIO {
-                    return (bytesRead, .again)
-                }
-                return (bytesRead, .error(errno))
-            }
-
-            if n == 0 {
-                return (bytesRead, .eof)
-            }
-
-            bytesRead += n
-            if bytesRead < buffer.count {
-                continue
-            }
-            return (bytesRead, .success)
-        }
     }
 }

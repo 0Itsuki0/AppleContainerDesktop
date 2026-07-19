@@ -41,7 +41,8 @@ struct ImageListView: View {
             return images
         }
         let filtered = self.images.filter({
-            $0.name.contains(trimmedText) || $0.tag.contains(trimmedText)
+            $0.name.localizedCaseInsensitiveContains(trimmedText)
+                || $0.tag.localizedCaseInsensitiveContains(trimmedText)
         })
 
         return filtered
@@ -449,7 +450,6 @@ struct ImageListView: View {
                         ContainerDisplayModel($0)
                     }),
                     updateContainer: { id in
-
                         let container = try await ContainerService.getContainer(
                             id
                         )
@@ -464,7 +464,6 @@ struct ImageListView: View {
                         self.showInUseContainerForImage?.inUseContainers[
                             index
                         ] = container
-
                     },
                     deleteContainer: { id in
                         self.showInUseContainerForImage?.inUseContainers
@@ -522,7 +521,7 @@ struct ImageListView: View {
                     }
                 }
             }
-            self.images = displayModels
+            self.images = displayModels.sorted(by: { $0.name > $1.name })
             self.lastUpdated = Date()
 
             if !failed.isEmpty {

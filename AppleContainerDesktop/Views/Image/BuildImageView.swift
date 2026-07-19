@@ -39,7 +39,6 @@ struct BuildImageView: View {
     // noCache: Bool = false,
     // cacheIn: [String] = [],
     // cacheOut: [String] = [],
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -304,7 +303,8 @@ struct BuildImageView: View {
                                         ],
                                         platforms: platforms,
                                         // build time variable
-                                        buildArguments: validBuildArguments.stringArray,
+                                        buildArguments: validBuildArguments
+                                            .stringArray,
                                         labels: [],
                                         noCache: false,
                                         targetStage: self.targetStage,
@@ -345,7 +345,7 @@ struct BuildImageView: View {
             .scrollTargetLayout()
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .frame(width: 480)
+        .frame(width: 560)
         .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
         .frame(maxHeight: 440)
         .sheet(

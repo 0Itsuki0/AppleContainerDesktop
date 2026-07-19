@@ -6,6 +6,7 @@
 //
 
 import ContainerResource
+import ContainerizationExtras
 import SwiftUI
 
 struct ContainerDetailView: View {
@@ -13,6 +14,7 @@ struct ContainerDetailView: View {
 
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(UserSettingsManager.self) private var userSettingsManager
+    @Environment(\.dismiss) private var dismiss
 
     @State private var container: ContainerDisplayModel?
     @State private var selectedCategory: DetailCategory = .inspect
@@ -33,6 +35,10 @@ struct ContainerDetailView: View {
     var body: some View {
         Group {
             if let container = container {
+                let compose = ComposeService.runningByCompose(
+                    containerName: container.name
+                )
+
                 VStack(alignment: .leading, spacing: 16) {
 
                     HStack {
@@ -62,139 +68,27 @@ struct ContainerDetailView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
-                            switch container.status {
-                            case .running:
+                            if let compose {
                                 Button(
                                     action: {
-                                        Task {
-                                            self.applicationManager
-                                                .showProgressView = true
-                                            do {
-                                                try await ContainerService
-                                                    .stopContainers(
-                                                        [
-                                                            container.container
-                                                                .id
-                                                        ],
-                                                        stopTimeoutSeconds:
-                                                            userSettingsManager
-                                                            .stopContainerTimeoutSeconds,
-                                                        messageStreamContinuation:
-                                                            applicationManager
-                                                            .messageStreamContinuation
-                                                    )
-
-                                                await self.getContainerInfo()
-                                                self.applicationManager
-                                                    .showProgressView = false
-                                                self.applicationManager
-                                                    .refreshContainerNeeded =
-                                                    true
-                                            } catch (let error) {
-                                                applicationManager.error = error
-                                            }
-                                        }
+                                        self.dismiss()
+                                        applicationManager
+                                            .pendingComposeAction =
+                                            .init(
+                                                compose: compose,
+                                                actionCategory: .inspect
+                                            )
                                     },
                                     label: {
-                                        controlButtonImage(
-                                            systemName: "stop.fill"
-                                        )
+                                        Text("Used by Compose")
                                     }
                                 )
-                                .buttonStyle(
-                                    CustomButtonStyle(
-                                        backgroundShape: .roundedRectangle(4),
-                                        backgroundColor: .gray
-                                    )
-                                )
-
-                            case .stopped:
-                                Button(
-                                    action: {
-                                        Task {
-                                            self.applicationManager
-                                                .showProgressView = true
-
-                                            do {
-                                                try await ContainerService
-                                                    .startContainer(
-                                                        container.container,
-                                                        attachContainerStdout:
-                                                            false,
-                                                        attachContainerStdIn:
-                                                            false,
-                                                        messageStreamContinuation:
-                                                            applicationManager
-                                                            .messageStreamContinuation
-                                                    )
-
-                                                await self.getContainerInfo()
-                                                self.applicationManager
-                                                    .showProgressView = false
-                                                self.applicationManager
-                                                    .refreshContainerNeeded =
-                                                    true
-                                            } catch (let error) {
-                                                applicationManager.error = error
-                                            }
-                                        }
-                                    },
-                                    label: {
-                                        controlButtonImage(
-                                            systemName: "play.fill"
-                                        )
-                                    }
-                                )
-                                .buttonStyle(
-                                    CustomButtonStyle(
-                                        backgroundShape: .roundedRectangle(4),
-                                        backgroundColor: .blue
-                                    )
-                                )
-
-                            case .stopping:
-                                EmptyView()
-
-                            case .unknown:
-                                EmptyView()
+                                .buttonStyle(.link)
+                            } else {
+                                self.actionView(container: container)
+                                    .disabled(compose != nil)
+                                    .opacity(compose != nil ? 0.5 : 1.0)
                             }
-
-                            Button(
-                                action: {
-                                    Task {
-                                        self.applicationManager
-                                            .showProgressView = true
-                                        do {
-                                            try await ContainerService
-                                                .deleteContainers(
-                                                    [container.container],
-                                                    force: true,
-                                                    messageStreamContinuation:
-                                                        applicationManager
-                                                        .messageStreamContinuation
-                                                )
-                                            self.applicationManager
-                                                .showProgressView = false
-                                            self.applicationManager
-                                                .selectedContainerID = nil
-                                            self.applicationManager
-                                                .refreshContainerNeeded = true
-                                        } catch (let error) {
-                                            applicationManager.error = error
-                                        }
-                                    }
-
-                                },
-                                label: {
-                                    controlButtonImage(systemName: "trash.fill")
-                                }
-                            )
-                            .buttonStyle(
-                                CustomButtonStyle(
-                                    backgroundShape: .roundedRectangle(4),
-                                    backgroundColor: .red
-                                )
-                            )
 
                         }
                         .fixedSize(horizontal: false, vertical: true)
@@ -270,6 +164,144 @@ struct ContainerDetailView: View {
 
     }
 
+    @ContentBuilder
+    private func actionView(container: ContainerDisplayModel) -> some View {
+        switch container.status {
+        case .running:
+            Button(
+                action: {
+                    Task {
+                        self.applicationManager
+                            .showProgressView = true
+                        do {
+                            try await ContainerService
+                                .stopContainers(
+                                    [
+                                        container.container
+                                            .id
+                                    ],
+                                    stopTimeoutSeconds:
+                                        userSettingsManager
+                                        .stopContainerTimeoutSeconds,
+                                    messageStreamContinuation:
+                                        applicationManager
+                                        .messageStreamContinuation
+                                )
+
+                            await self.getContainerInfo()
+                            self.applicationManager
+                                .showProgressView = false
+                            self.applicationManager
+                                .refreshContainerNeeded =
+                                true
+                        } catch (let error) {
+                            applicationManager.error = error
+                        }
+                    }
+                },
+                label: {
+                    controlButtonImage(
+                        systemName: "stop.fill"
+                    )
+                }
+            )
+            .buttonStyle(
+                CustomButtonStyle(
+                    backgroundShape: .roundedRectangle(4),
+                    backgroundColor: .gray
+                )
+            )
+
+        case .stopped:
+            Button(
+                action: {
+                    Task {
+                        self.applicationManager
+                            .showProgressView = true
+
+                        do {
+                            try await ContainerService
+                                .startContainer(
+                                    container.container,
+                                    attachContainerStdout:
+                                        false,
+                                    attachContainerStdIn:
+                                        false,
+                                    messageStreamContinuation:
+                                        applicationManager
+                                        .messageStreamContinuation
+                                )
+
+                            await self.getContainerInfo()
+                            self.applicationManager
+                                .showProgressView = false
+                            self.applicationManager
+                                .refreshContainerNeeded =
+                                true
+                        } catch (let error) {
+                            applicationManager.error = error
+                        }
+                    }
+                },
+                label: {
+                    controlButtonImage(
+                        systemName: "play.fill"
+                    )
+                }
+            )
+            .buttonStyle(
+                CustomButtonStyle(
+                    backgroundShape: .roundedRectangle(4),
+                    backgroundColor: .blue
+                )
+            )
+
+        case .stopping:
+            EmptyView()
+
+        case .unknown:
+            EmptyView()
+        }
+
+        Button(
+            action: {
+                Task {
+                    self.applicationManager
+                        .showProgressView = true
+                    do {
+                        try await ContainerService
+                            .deleteContainers(
+                                [container.container],
+                                force: true,
+                                messageStreamContinuation:
+                                    applicationManager
+                                    .messageStreamContinuation
+                            )
+                        self.applicationManager
+                            .showProgressView = false
+                        self.applicationManager
+                            .selectedContainerID = nil
+                        self.applicationManager
+                            .refreshContainerNeeded = true
+                    } catch (let error) {
+                        applicationManager.error = error
+                    }
+                }
+
+            },
+            label: {
+                controlButtonImage(systemName: "trash.fill")
+            }
+        )
+        .buttonStyle(
+            CustomButtonStyle(
+                backgroundShape: .roundedRectangle(4),
+                backgroundColor: .red
+            )
+        )
+
+    }
+
     @ContentBuilder private func containerInspectView(
         _ container: ContainerDisplayModel
     ) -> some View {
@@ -318,53 +350,59 @@ struct ContainerDetailView: View {
                         .frame(height: 8)
 
                     Section {
-                        //                    KeyValuesView(keyValues: ports, emptyText: "No ports added")
                         let volumeFSs = container.container.volumeFSs
-                        if volumeFSs.isEmpty {
-                            Text("No volume binded")
-                                .multilineTextAlignment(.leading)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 16)
+                        VStack(alignment: .leading, spacing: 16) {
 
-                        }
-                        ForEach(0..<volumeFSs.count, id: \.self) { index in
-                            let fileSystem: Filesystem = volumeFSs[index]
-                            if let name = fileSystem.volumeName {
-                                HStack {
-                                    Text(name)
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .frame(
-                                            width: self.leftColumnWidth,
-                                            alignment: .leading
-                                        )
-                                        .foregroundStyle(.secondary)
-
-                                    let fileURL = URL(
-                                        filePath: fileSystem.source
+                            if volumeFSs.isEmpty {
+                                Text("No volume binded")
+                                    .multilineTextAlignment(.leading)
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment: .leading
                                     )
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 16)
+                            }
 
-                                    HStack(spacing: 8) {
-                                        Text(
-                                            "\(fileSystem.source)\(fileSystem.destination)"
+                            ForEach(0..<volumeFSs.count, id: \.self) { index in
+                                let fileSystem: Filesystem = volumeFSs[index]
+                                if let name = fileSystem.volumeName {
+                                    HStack {
+                                        Text(name)
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(
+                                                width: self.leftColumnWidth,
+                                                alignment: .leading
+                                            )
+                                            .foregroundStyle(.secondary)
+
+                                        let fileURL = URL(
+                                            filePath: fileSystem.source
                                         )
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                        .frame(maxWidth: 240)
 
-                                        Button {
-                                            self.openFile(fileURL)
-                                        } label: {
-                                            Image(systemName: "arrow.right")
-                                                .contentShape(Rectangle())
-                                                .fontWeight(.semibold)
+                                        HStack(spacing: 8) {
+                                            Text(
+                                                "\(fileSystem.source)\(fileSystem.destination)"
+                                            )
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                            .frame(maxWidth: 240)
+
+                                            Button {
+                                                self.openFile(fileURL)
+                                            } label: {
+                                                Image(systemName: "arrow.right")
+                                                    .contentShape(Rectangle())
+                                                    .fontWeight(.semibold)
+                                            }
+                                            .buttonStyle(.link)
                                         }
-                                        .buttonStyle(.link)
                                     }
-                                }
-                                .padding(.horizontal, 16)
+                                    .padding(.horizontal, 16)
 
+                                    Divider()
+                                }
                             }
                         }
                     } header: {
@@ -375,21 +413,33 @@ struct ContainerDetailView: View {
                         .frame(height: 8)
 
                     Section {
+                        // what the container is configured to attach to.
+                        // Always populated, even when the container is stopped.
                         let networks = container.container.configuration
                             .networks
+                        // the runtime attachments the network plugin actually created.
+                        // Only populated while the container is running, and it's the only place the assigned IPv4 address and hostname live.
                         let attachments = container.container.networks
-                        if networks.isEmpty {
-                            Text("No network attached")
-                                .multilineTextAlignment(.leading)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 16)
 
-                        }
-                        ForEach(0..<networks.count, id: \.self) { index in
-                            let network = networks[index]
-                            HStack {
-                                Text(network.network)
+                        VStack(alignment: .leading, spacing: 16) {
+
+                            if networks.isEmpty {
+                                Text("No network attached")
+                                    .multilineTextAlignment(.leading)
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment: .leading
+                                    )
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 16)
+
+                            }
+                            ForEach(0..<networks.count, id: \.self) { index in
+                                let network = networks[index]
+                                HStack {
+                                    Text(
+                                        "\(network.network)  (\(network.options.hostname))"
+                                    )
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                                     .frame(
@@ -398,20 +448,24 @@ struct ContainerDetailView: View {
                                     )
                                     .foregroundStyle(.secondary)
 
-                                if let attachment = attachments.first(where: {
-                                    $0.network == network.network
-                                }) {
-                                    Text(
-                                        "\(attachment.ipv4Address) (\(attachment.hostname))"
-                                    )
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                } else {
-                                    Text("(Not attached)")
-                                        .foregroundStyle(.secondary)
+                                    if let attachment = attachments.first(
+                                        where: {
+                                            $0.network == network.network
+                                        })
+                                    {
+                                        Text(
+                                            "\(attachment.ipv4Address.description)"
+                                        )
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    } else {
+                                        Text("(Not attached)")
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
+                                .padding(.horizontal, 16)
+                                Divider()
                             }
-                            .padding(.horizontal, 16)
                         }
                     } header: {
                         sectionHeader(

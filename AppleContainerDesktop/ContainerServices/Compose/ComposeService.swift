@@ -27,7 +27,7 @@ enum ComposeService {
     private static let encoder = JSONEncoder()
     private static let decoder = JSONDecoder()
 
-    static func listComposes() -> [ComposeResource] {
+    static func listComposeResources() -> [ComposeResource] {
         if let data = userDefaults.data(forKey: userDefaultsKey) {
             return (try? decoder.decode([ComposeResource].self, from: data))
                 ?? []
@@ -35,9 +35,80 @@ enum ComposeService {
         return []
     }
 
-    static func saveComposes(_ composes: [ComposeResource]) throws {
-        let data = try encoder.encode(composes)
+    static func saveComposeResources(_ composes: [ComposeResource]) throws {
+        try self.addComposeResources(composes)
+    }
+
+    static func addComposeResources(_ composes: [ComposeResource]) throws {
+        var allComposes = listComposeResources()
+        allComposes.removeAll(where: { current in
+            composes.contains(where: { $0.name == current.name })
+        })
+        allComposes = allComposes + composes
+        let data = try encoder.encode(allComposes)
         userDefaults.set(data, forKey: userDefaultsKey)
+    }
+
+    static func composeResourceExist(name: String) -> Bool {
+        listComposeResources().contains(where: { $0.name == name })
+    }
+
+    static func runningByCompose(containerName: String) -> ComposeResource? {
+        return listComposeResources().first(where: {
+            $0.runningContainers.contains(where: {
+                $0.value.contains(containerName)
+            })
+                || $0.stoppedContainers.contains(where: {
+                    $0.value.contains(containerName)
+                })
+        })
+    }
+
+    static func removeComposeResources(
+        composes: [ComposeResource],
+        messageStreamContinuation: AsyncStream<String>.Continuation?
+    ) async throws {
+        guard !composes.isEmpty else { return }
+
+        messageStreamContinuation?.yield(
+            "Removing composes: \(composes.map(\.name).joined(separator: ", "))..."
+        )
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for compose in composes {
+                group.addTask {
+                    let _ = try await removeCompose(
+                        compose.baseCompose,
+                        additionalComposes: compose.additionalComposes,
+                        // envs for parsing vars in the compose files
+                        envFiles: compose.envFiles,
+                        projectDirectory: compose.projectDirectory,
+                        nameOverride: compose.nameOverride,
+                        startedContainers: compose.runningContainers,
+                        messageStreamContinuation: messageStreamContinuation
+                    )
+
+                    if let parsedCompose = compose.parsedCompose {
+                        try await cleanUpStaledContainers(
+                            compose: parsedCompose,
+                            startedContainers: compose.runningContainers
+                        )
+                    }
+                }
+            }
+            try await group.waitForAll()
+        }
+
+        let names = composes.map(\.name)
+        var allComposes = listComposeResources()
+        allComposes.removeAll(where: { names.contains($0.name) })
+
+        let data = try encoder.encode(allComposes)
+        userDefaults.set(data, forKey: userDefaultsKey)
+
+        messageStreamContinuation?.yield(
+            "Composes removed!"
+        )
     }
 
     static func resolveActiveProfiles(_ profile: [String]) -> Set<
@@ -56,26 +127,45 @@ enum ComposeService {
         return result
     }
 
+    // helper function to clean up containers for services that are removed from dockerCompose
+    static func cleanUpStaledContainers(
+        compose: DockerCompose,
+        startedContainers: [String: [ContainerSnapshotID]]
+    ) async throws {
+        let leftovers = startedContainers.filter({ serviceName, _ in
+            compose.services[serviceName] == nil
+        }).flatMap({ $0.value })
+
+        try await ContainerService.stopContainers(
+            leftovers,
+            stopTimeoutSeconds: 5,
+            messageStreamContinuation: nil
+        )
+        try await deleteContainers(Array(leftovers))
+    }
+
+    nonisolated
     static func resolveProjectName(
         projectDirectory: URL,
-        compose: DockerCompose,
+        compose: DockerCompose?,
         nameOverride: String?
     ) -> String {
         if let nameOverride {
             return nameOverride
         }
-        return compose.name ?? deriveProjectName(url: projectDirectory)
+        return compose?.name ?? deriveProjectName(url: projectDirectory)
     }
 
+    nonisolated
     static func deriveProjectName(url: URL) -> String {
-        let url = !url.isDirectory ? url.deletingLastPathComponent() : url
-        // We need to replace '.' with _ because it is not supported in the container name
+        let url = !url.isDirectory ? url.parentDirectory : url
+        // replace '.' with _ because it is not supported in the container name
         let projectName = url.lastPathComponent
             .replacingOccurrences(of: ".", with: "_")
         return projectName
     }
 
-    /// Selects the services `up`, `build`, and `down` should act on by default,
+    /// Selects the services `up`, `build` should act on by default,
     /// applying both explicit service-name filtering and Compose `profiles` gating.
     ///
     /// Per the Compose spec, `profiles` gating is bypassed in two cases:
@@ -86,7 +176,7 @@ enum ComposeService {
     /// is profile-eligible for `activeProfiles` (unprofiled, or one of its
     /// profiles is active); dependencies of that seed are then pulled in
     /// regardless of their own profile.
-    static func selectServices(
+    static func selectServicesForUpBuild(
         compose: DockerCompose,
         requestedServices: [String],
         requestedProfiles: [String]
@@ -149,6 +239,63 @@ enum ComposeService {
         }
 
         return allServices.filter { selected.contains($0.serviceName) }
+    }
+
+    /// Opposite of `selectServicesForUpBuild`, for `down` and `rm`:
+    /// - returns the requested (or profile-eligible default) services plus everything that transitively
+    /// depends on them — not their dependencies.
+    ///
+    /// NOTE:
+    /// 1. Output order is arbitrary because compose.services is a Swift Dictionary. That's fine as long as you feed the result through topoSortConfiguredServices and reverse the stages for down, as its own doc comment already says — don't stop containers in this array's raw order.
+    /// 2. Real docker compose down <service> doesn't cascade to dependents — it stops only the named services.
+    /// However, this behavior of down/removing services depend on them as well is stricter and safer, but it deviates from the docker CLI.
+    static func selectServicesForDownRemove(
+        compose: DockerCompose,
+        requestedServices: [String],
+        requestedProfiles: [String]
+    ) throws -> [(serviceName: String, service: Service)] {
+        let activeProfiles = resolveActiveProfiles(requestedProfiles)
+
+        var servicesByName: [String: Service] = [:]
+        var dependents: [String: [String]] = [:]
+        var orderedNames: [String] = []
+
+        for (name, service) in compose.services {
+            guard let service else { continue }
+            servicesByName[name] = service
+            orderedNames.append(name)
+            for (depName, _) in service.depends_on ?? [:] {
+                dependents[depName, default: []].append(name)
+            }
+        }
+
+        var seedNames = requestedServices
+        if seedNames.isEmpty {
+            seedNames = orderedNames.filter { name in
+                isProfileEligible(
+                    serviceProfiles: servicesByName[name]?.profiles,
+                    activeProfiles: activeProfiles
+                )
+            }
+        }
+
+        var selected = Set<String>()
+        var queue = seedNames
+        while let name = queue.popLast() {
+            guard servicesByName[name] != nil else {
+                throw ContainerizationError(
+                    .invalidArgument,
+                    message: "Service \(name) does not exist."
+                )
+            }
+            if selected.insert(name).inserted {
+                queue.append(contentsOf: dependents[name] ?? [])
+            }
+        }
+
+        return orderedNames.compactMap { name in
+            selected.contains(name) ? (name, servicesByName[name]!) : nil
+        }
     }
 
     static func isProfileEligible(

@@ -35,7 +35,7 @@ struct NetworkListView: View {
             return networks
         }
         let filtered = self.networks.filter({
-            $0.name.contains(trimmedText)
+            $0.name.localizedCaseInsensitiveContains(trimmedText)
         })
 
         return filtered
@@ -159,7 +159,7 @@ struct NetworkListView: View {
                             .frame(height: 48)
                     }
                     .width(min: 80, ideal: 80)
-
+                    
                     TableColumn(TableHelper.columnHeader("Mode")) { network in
                         Text(network.mode.rawValue)
                     }
@@ -365,7 +365,6 @@ struct NetworkListView: View {
                         ContainerDisplayModel($0)
                     }),
                     updateContainer: { id in
-
                         let container = try await ContainerService.getContainer(
                             id
                         )
@@ -380,7 +379,6 @@ struct NetworkListView: View {
                         self.showInUseContainerForNetwork?.inUseContainers[
                             index
                         ] = container
-
                     },
                     deleteContainer: { id in
                         self.showInUseContainerForNetwork?.inUseContainers
@@ -420,7 +418,7 @@ struct NetworkListView: View {
                 NetworkDisplayModel($0, containers: containers)
             })
 
-            self.networks = displayModels
+            self.networks = displayModels.sorted(by: { $0.name > $1.name })
             self.lastUpdated = Date()
 
         } catch (let error) {
@@ -452,12 +450,12 @@ private struct NetworkDetailOptionView: View {
             KeyValuesDisplayView(
                 keyValues: keyValueModels,
                 emptyText: emptyText,
-                leftColumnWidth: 120
+//                leftColumnWidth: 120
             )
 
         }
         .padding(.all, 24)
-        .frame(width: 320, alignment: .topLeading)
+        .frame(width: 560, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)
         .overlay(
             alignment: .topTrailing,

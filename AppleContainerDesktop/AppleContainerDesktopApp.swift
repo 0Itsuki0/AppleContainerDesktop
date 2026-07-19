@@ -20,6 +20,8 @@ struct AppleContainerDesktopApp: App {
             "Apple Container Desktop",
             id: Self.dashboardWindowId,
             content: {
+//                ContentView()
+//                TestView()
                 ComposeListView()
                     .environment(applicationManager)
                     .environment(userSettingsManager)
@@ -28,19 +30,6 @@ struct AppleContainerDesktopApp: App {
         .defaultSize(width: 800, height: 520)
         .defaultPosition(.center)
         .windowResizability(.contentSize)
-
-        //        Window(
-        //            "Apple Container Desktop",
-        //            id: Self.dashboardWindowId,
-        //            content: {
-        //                ContentView()
-        //                    .environment(applicationManager)
-        //                    .environment(userSettingsManager)
-        //            }
-        //        )
-        //        .defaultSize(width: 800, height: 520)
-        //        .defaultPosition(.center)
-        //        .windowResizability(.contentSize)
 
         MenuBarExtra(
             content: {
@@ -178,5 +167,33 @@ struct TestView: View {
             }
         }
     }
+    
+//    private func handleSave(override: Bool = false) {
+//        let baseURL = URL(
+//            filePath: "/Users/itsuki/Desktop/ComposeTest/compose.yaml"
+//        )
+//
+//        do {
+//            let compose = try ComposeResource(
+//                baseCompose: baseURL,
+//                projectDirectory: nil,
+//                additionalComposes: [],
+//                envFiles: [],
+//                nameOverride: nil
+//            )
+//            
+//            if !override, ComposeService.composeExist(name: compose.name) {
+//                self.conflictingName = compose.name
+//                return
+//            }
+//
+//            try ComposeService.saveComposes([compose])
+//            self.dismiss()
+//        } catch {
+//            self.errorMessage = error.localizedDescription
+//        }
+//
+//    }
+
 
 }

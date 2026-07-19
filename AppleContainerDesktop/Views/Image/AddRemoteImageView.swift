@@ -190,7 +190,7 @@ struct AddRemoteImageView: View {
 
         }
         .padding(.all, 24)
-        .frame(width: 480)
+        .frame(width: 560)
         .fixedSize(horizontal: false, vertical: true)
         .sheet(
             isPresented: $showProgressView,
