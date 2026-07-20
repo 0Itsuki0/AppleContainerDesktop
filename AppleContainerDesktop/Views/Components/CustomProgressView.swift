@@ -22,5 +22,12 @@ struct CustomProgressView: View {
         .padding(.all, 24)
         .frame(width: 280, height: 180)
         .interactiveDismissDisabled()
+        // make sure no staled messages show up
+        .onAppear {
+            self.applicationManager.progressMessage = "Loading..."
+        }
+        .onDisappear {
+            self.applicationManager.progressMessage = "Loading..."
+        }
     }
 }

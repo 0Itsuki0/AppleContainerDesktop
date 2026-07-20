@@ -9,9 +9,15 @@ internal import Logging
 import SwiftUI
 
 enum DisplayCategory: String, Identifiable, Equatable {
+    // section 1
     case container
     case image
     case volume
+    case network
+    
+    // section 2
+    case compose
+    
 
     var displayTitle: String {
         switch self {
@@ -21,6 +27,10 @@ enum DisplayCategory: String, Identifiable, Equatable {
             "Images"
         case .volume:
             "Volumes"
+        case .network:
+            "Networks"
+        case .compose:
+            "Composes"
         }
     }
 
@@ -32,6 +42,10 @@ enum DisplayCategory: String, Identifiable, Equatable {
             "cloud.fill"
         case .volume:
             "internaldrive.fill"
+        case .network:
+            "network"
+        case .compose:
+            "square.grid.2x2.fill"
         }
     }
 
@@ -39,8 +53,7 @@ enum DisplayCategory: String, Identifiable, Equatable {
         self.rawValue
     }
 
-    // for customizing order
-    static let allCases: [DisplayCategory] = [.image, .container, .volume]
+    static let allCases: [[DisplayCategory]] = [[.image, .container, .volume, .network], [.compose]]
 }
 
 @Observable
@@ -92,8 +105,9 @@ class ApplicationManager {
 
     var pendingComposeAction: ComposeAction? {
         didSet {
-            //            self.selectedCategory = .
-            // TODO: set selected category to be compose
+            if self.pendingComposeAction != nil {
+                self.selectedCategory = .compose
+            }
         }
     }
 

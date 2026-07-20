@@ -74,7 +74,6 @@ struct InUseContainersView: View {
         .onDisappear {
             self.showProgressView = false
         }
-
     }
 }
 

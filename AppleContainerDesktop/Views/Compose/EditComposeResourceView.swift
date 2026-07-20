@@ -262,7 +262,6 @@ struct EditComposeResourceView: View {
             envFiles: envFiles,
             nameOverride: nameOverride
         )
-        print("composeName", composeName)
 
         if ComposeService.composeResourceExist(name: composeName) {
             if isNew || composeName != self.existingCompose?.name {

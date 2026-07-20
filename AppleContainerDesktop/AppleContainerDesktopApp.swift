@@ -20,9 +20,9 @@ struct AppleContainerDesktopApp: App {
             "Apple Container Desktop",
             id: Self.dashboardWindowId,
             content: {
-//                ContentView()
+                ContentView()
 //                TestView()
-                ComposeListView()
+//                ComposeListView()
                     .environment(applicationManager)
                     .environment(userSettingsManager)
             }

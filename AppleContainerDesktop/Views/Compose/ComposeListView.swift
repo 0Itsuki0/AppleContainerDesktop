@@ -396,7 +396,7 @@ struct ComposeListView: View {
                         ContentUnavailableView(
                             trimmedText.isEmpty
                                 ? "No Composes Found" : "No Matching Composes",
-                            systemImage: "square.stack.3d.up.fill"
+                            systemImage: DisplayCategory.compose.icon
                         )
                     }
                 }

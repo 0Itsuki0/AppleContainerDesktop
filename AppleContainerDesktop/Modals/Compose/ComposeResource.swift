@@ -303,7 +303,6 @@ nonisolated extension ComposeResource {
     //
     // NOTE: manual refresh instead of after parsing to avoid processing-overhead
     func refreshServiceStatus(onRunningChanged: (@Sendable () -> Void)?) {
-        print(#function)
         guard let compose = parsedCompose else { return }
         guard !self.runningContainers.isEmpty || !self.stoppedContainers.isEmpty
         else { return }
@@ -334,13 +333,10 @@ nonisolated extension ComposeResource {
 
             await removeStaledContainers(containersToRemove)
 
-            print("before refreshing status: ", finalRunning)
-
             await refreshContainerStatus(
                 runningContainers: &finalRunning,
                 stoppedContainers: &finalStopped
             )
-            print(finalRunning)
             self.runningContainers = finalRunning.filter({
                 !$0.value.isEmpty
             })
@@ -351,7 +347,6 @@ nonisolated extension ComposeResource {
             if self.runningContainers != previous.0
                 || self.stoppedContainers != previous.1
             {
-                print("changed, save compose resource", self.runningContainers)
                 do {
                     try await ComposeService.saveComposeResources([self])
                     if self.runningContainers != previous.0 {

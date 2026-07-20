@@ -22,28 +22,44 @@ struct ContentView: View {
             NavigationSplitView(
                 sidebar: {
                     VStack {
-                        ForEach(DisplayCategory.allCases) { category in
-                            Button(
-                                action: {
-                                    applicationManager.selectedCategory =
-                                        category
-                                },
-                                label: {
-                                    title(
-                                        category.displayTitle,
-                                        iconName: category.icon,
-                                        selected: category
-                                            == applicationManager
-                                            .selectedCategory
-                                    )
-                                    .contentShape(Rectangle())
-                                }
-                            )
+                        ForEach(
+                            DisplayCategory.allCases.enumerated(),
+                            id: \.offset
+                        ) { index, categorySection in
+
+                            if index > 0 {
+                                Divider()
+                                    .padding(.vertical, 8)
+                            }
+
+                            ForEach(categorySection) { category in
+                                Button(
+                                    action: {
+                                        applicationManager.selectedCategory =
+                                            category
+                                    },
+                                    label: {
+                                        title(
+                                            category.displayTitle,
+                                            iconName: category.icon,
+                                            selected: category
+                                                == applicationManager
+                                                .selectedCategory
+                                        )
+                                        .contentShape(Rectangle())
+                                    }
+                                )
+                            }
+
                         }
                     }
                     .padding()
                     .buttonStyle(.plain)
-                    .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
+                    .navigationSplitViewColumnWidth(
+                        min: 180,
+                        ideal: 200,
+                        max: 240
+                    )
                     .frame(maxHeight: .infinity, alignment: .topLeading)
                     .background(Color.gray.opacity(0.1))
 
@@ -58,6 +74,10 @@ struct ContentView: View {
                                 ImageListView()
                             case .volume:
                                 VolumeListView()
+                            case .network:
+                                NetworkListView()
+                            case .compose:
+                                ComposeListView()
                             }
                         }
                         .environment(self.applicationManager)
@@ -197,21 +217,15 @@ struct ContentView: View {
         .frame(minWidth: 800, minHeight: 520)
     }
 
-    private func title(_ string: String, iconName: String?, selected: Bool)
+    private func title(_ string: String, iconName: String, selected: Bool)
         -> some View
     {
-        Group {
-            if let iconName {
-                Label(string, systemImage: iconName)
-            } else {
-                Text(string)
-            }
-        }
-        .font(.headline)
-        .foregroundColor(selected ? .primary : .secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.all, 4)
-
+        Label(string, systemImage: iconName)
+            .labelReservedIconWidth(24)
+            .font(.headline)
+            .foregroundColor(selected ? .primary : .secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.all, 4)
     }
 
     private func startSystem() async {

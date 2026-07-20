@@ -33,7 +33,8 @@ struct ContainerListView: View {
         let filtered = self.containers.filter({
             $0.name.localizedCaseInsensitiveContains(trimmedText) == true
                 || $0.imageName.localizedCaseInsensitiveContains(trimmedText)
-                || $0.ports.localizedCaseInsensitiveContains(trimmedText) == true
+                || $0.ports.localizedCaseInsensitiveContains(trimmedText)
+                    == true
         })
 
         return runningContainerOnly
@@ -233,7 +234,9 @@ struct ContainerListView: View {
 
                     TableColumn(TableHelper.columnHeader("Port(s)")) {
                         container in
-                        if container.ports.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        if container.ports.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        ).isEmpty {
                             Text("None")
                                 .foregroundStyle(.secondary)
                         } else {
@@ -246,25 +249,35 @@ struct ContainerListView: View {
 
                     TableColumn(TableHelper.columnHeader("Volume(s)")) {
                         container in
-                        Text(
-                            container.container.volumeNames.joined(
-                                separator: "\n"
+                        if container.container.volumeNames.isEmpty {
+                            Text("None")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(
+                                container.container.volumeNames.joined(
+                                    separator: "\n"
+                                )
                             )
-                        )
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     .width(min: 120, ideal: 120, max: 160)
 
                     TableColumn(TableHelper.columnHeader("Network(s)")) {
                         container in
-                        Text(
-                            container.container.networkNames.joined(
-                                separator: "\n"
+                        if container.container.networkNames.isEmpty {
+                            Text("None")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(
+                                container.container.networkNames.joined(
+                                    separator: "\n"
+                                )
                             )
-                        )
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(nil)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     .width(min: 100, ideal: 100, max: 160)
 
