@@ -20,6 +20,8 @@ import Foundation
 // 3. build.network not supported when building an image from dockerfile (as of current implementation of Container)
 // 4. service.develop, configs, hooks not supported
 // 6. network alias not supported  (as of current implementation of Container)
+// 7. Volumes_from currently not supported
+// 8. replica not supported for named volumes (as of current implementation of Container)
 
 enum ComposeService {
     private static let userDefaults = UserDefaults.standard
@@ -247,15 +249,19 @@ enum ComposeService {
         if !requestedServices.isEmpty {
             seedNames = requestedServices
         } else {
-            seedNames =
-                allServices
-                .filter {
-                    isProfileEligible(
-                        serviceProfiles: $0.service.profiles,
-                        activeProfiles: activeProfiles
-                    )
-                }
-                .map(\.serviceName)
+            if !requestedProfiles.isEmpty {
+                seedNames =
+                    allServices
+                    .filter {
+                        isProfileEligible(
+                            serviceProfiles: $0.service.profiles,
+                            activeProfiles: activeProfiles
+                        )
+                    }
+                    .map(\.serviceName)
+            } else {
+                seedNames = allServices.map(\.serviceName)
+            }
         }
 
         var selected = Set<String>()

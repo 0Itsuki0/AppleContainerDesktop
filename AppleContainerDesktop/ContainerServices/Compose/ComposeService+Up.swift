@@ -131,12 +131,24 @@ extension ComposeService {
         )
 
         // start service (containers) in order based on the depends_on field
-        try await self.startServices(
-            projectName: projectName,
-            selectedServices: selectedServices,
-            containerCreated: containersBuilt,
-            messageStreamContinuation: messageStreamContinuation
-        )
+        do {
+            try await self.startServices(
+                projectName: projectName,
+                selectedServices: selectedServices,
+                containerCreated: containersBuilt,
+                messageStreamContinuation: messageStreamContinuation
+            )
+        } catch {
+            // create failed, delete all created.
+            try? await self.downServices(
+                projectName: projectName,
+                selectedServices: selectedServices,
+                startedContainers: containersBuilt.mapValues({ $0.map(\.id) }),
+                shouldDelete: true,
+                messageStreamContinuation: nil
+            )
+            throw error
+        }
 
         messageStreamContinuation?.yield(
             "Compose up!"
@@ -407,22 +419,55 @@ extension ComposeService {
         rebuildOtherResource: Bool,
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws -> [ContainerSnapshot] {
+        if !(service.volumes_from ?? []).isEmpty {
+            throw ContainerizationError(
+                .invalidArgument,
+                message: "Volumes_from currently not supported."
+            )
+        }
+
         let recreateContainer = rebuildOtherResource || rebuildImage
 
         let count = service.deploy?.replicas ?? 1
-        // Compose does not scale a service beyond one container if the Compose file specifies a container_name. Attempting to do so results in an error.
         let container_name = service.container_name
-        if container_name != nil, count > 1 {
-            throw ContainerizationError(
-                .invalidArgument,
-                message: "Container with explicit name cannot be scaled."
-            )
+
+        if count > 1 {
+            // Compose does not scale a service beyond one container if the Compose file specifies a container_name. Attempting to do so results in an error.
+            if container_name != nil {
+                throw ContainerizationError(
+                    .invalidArgument,
+                    message: "Container with explicit name cannot be scaled."
+                )
+            }
+
+            // Fixed host ports (ex: 8080:80): Only one replica can bind the host port.
+            if !(service.ports ?? []).isEmpty {
+                throw ContainerizationError(
+                    .invalidArgument,
+                    message: "Container with explicit ports cannot be scaled."
+                )
+            }
+
+            // Named Volumes(apple container-specific):
+            // Apple explicitly documents this as a limitation of its named volume implementation:
+            // One difference between named volumes in container and in other systems is that you can’t read-write a named volume across multiple running containers (VMs).
+            if !(service.volumes ?? []).filter({
+                $0.isAnonymous(topLevelVolume: volumes)
+            }).isEmpty {
+                throw ContainerizationError(
+                    .invalidArgument,
+                    message:
+                        "Apple container does not support shared named volumes between multiple containers."
+                )
+            }
         }
 
         let image: String
         if service.build != nil {
             // docker
-            messageStreamContinuation?.yield("Building image for service: \(serviceName)...")
+            messageStreamContinuation?.yield(
+                "Building image for service: \(serviceName)..."
+            )
             let clientImage = try await buildService(
                 service,
                 serviceName: serviceName,
@@ -433,7 +478,9 @@ extension ComposeService {
             image = clientImage.reference
         } else if let serviceImage = service.image {
             // remote
-            messageStreamContinuation?.yield("Pulling image for service: \(serviceName)...")
+            messageStreamContinuation?.yield(
+                "Pulling image for service: \(serviceName)..."
+            )
             try await ImageService.pullImage(
                 reference: serviceImage,
                 platform: service.platform?.containerPlatform
@@ -531,7 +578,9 @@ extension ComposeService {
         var resolvedResult: [ContainerSnapshot] = []
         var failures: [String] = []
 
-        messageStreamContinuation?.yield("Creating containers for \(serviceName)...")
+        messageStreamContinuation?.yield(
+            "Creating containers for \(serviceName)..."
+        )
 
         await withTaskGroup(
             of: (container: ContainerSnapshot?, error: String?).self
@@ -820,5 +869,20 @@ extension ComposeService {
                 }) ?? []
             )
         })
+    }
+}
+
+extension Service.Volume {
+    func isAnonymous(topLevelVolume: [String: DockerComposeParser.Volume])
+        -> Bool
+    {
+        guard self.type == .volume else {
+            return false
+        }
+
+        return topLevelVolume.contains(
+            where: {
+                $0.0 == self.source
+            })
     }
 }

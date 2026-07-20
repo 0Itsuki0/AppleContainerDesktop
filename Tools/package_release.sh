@@ -92,15 +92,47 @@ CLI_BUILD_DIR=$(xcodebuild \
   -showBuildSettings 2>/dev/null | awk -F' = ' '/ BUILT_PRODUCTS_DIR/{print $2; exit}')
 CLI_BIN="$CLI_BUILD_DIR/$CLI_PRODUCT"
 
-# ── 3. Assemble the DMG staging folder ───────────────────────────────────────
+# ── 3. Notarize & staple the app (the CLI is not notarized) ──────────────────
+log "Notarizing app..."
+APP_ZIP="/tmp/AppleContainerDesktop-notarize.zip"
+ditto -c -k --keepParent "$APP_PATH" "$APP_ZIP"
+xcrun notarytool submit "$APP_ZIP" \
+  --keychain-profile "$NOTARYTOOL_PROFILE" \
+  --wait
+log "Stapling ticket..."
+xcrun stapler staple "$APP_PATH"
+rm -f "$APP_ZIP"
+
+# ── 4. Assemble the DMG staging folder (app + CLI + install.sh) ──────────────
 log "Staging DMG contents..."
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"
 cp -R "$APP_PATH" "$STAGING_DIR/$GUI_SCHEME.app"
-ln -s /Applications "$STAGING_DIR/Applications"
 cp "$CLI_BIN" "$STAGING_DIR/$CLI_INSTALL_NAME"
 
-# ── 4. Build the DMG (built-in hdiutil, no styling) ──────────────────────────
+# install.sh installs the CLI sitting next to it on the mounted volume.
+cat > "$STAGING_DIR/install.sh" << 'INSTALL'
+#!/bin/bash
+#
+# install.sh — install the container-desktop CLI to /usr/local/bin.
+#
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BIN_NAME="container-desktop"
+BINDIR="/usr/local/bin"
+
+echo "Installing $BIN_NAME to $BINDIR (may require your password)..."
+sudo install -d "$BINDIR"
+sudo install "$SCRIPT_DIR/$BIN_NAME" "$BINDIR/$BIN_NAME"
+# The CLI is not notarized; clear quarantine so it runs without Gatekeeper prompts.
+sudo xattr -d com.apple.quarantine "$BINDIR/$BIN_NAME" 2>/dev/null || true
+
+echo "Installed: $BINDIR/$BIN_NAME"
+INSTALL
+chmod +x "$STAGING_DIR/install.sh"
+
+# ── 5. Build the DMG (built-in hdiutil, no styling) ──────────────────────────
 DMG_NAME="AppleContainerDesktop_${VERSION}.dmg"
 DMG_PATH="/tmp/$DMG_NAME"
 log "Building $DMG_NAME..."
@@ -111,51 +143,12 @@ hdiutil create \
   -ov -format UDZO \
   "$DMG_PATH"
 
-# ── 5. Notarize & staple the DMG (covers app + CLI inside it) ─────────────────
-log "Notarizing DMG..."
-xcrun notarytool submit "$DMG_PATH" \
-  --keychain-profile "$NOTARYTOOL_PROFILE" \
-  --wait
-log "Stapling ticket..."
-xcrun stapler staple "$DMG_PATH"
-
-# ── 6. Place outputs on the Desktop ──────────────────────────────────────────
-OUT_DIR="$HOME/Desktop/AppleContainerDesktop_${VERSION}"
-log "Writing outputs to $OUT_DIR..."
-mkdir -p "$OUT_DIR"
-mv "$DMG_PATH" "$OUT_DIR/$DMG_NAME"
-
-# install.sh mounts the sibling DMG and installs the CLI to /usr/local/bin.
-cat > "$OUT_DIR/install.sh" << 'INSTALL'
-#!/bin/bash
-#
-# install.sh — install the container-desktop CLI from the sibling DMG.
-#
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DMG="$(ls "$SCRIPT_DIR"/*.dmg 2>/dev/null | head -1)"
-BIN_NAME="container-desktop"
-BINDIR="/usr/local/bin"
-
-if [ -z "$DMG" ]; then
-  echo "No .dmg found next to install.sh." >&2
-  exit 1
-fi
-
-MNT="$(mktemp -d)"
-hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT" >/dev/null
-trap 'hdiutil detach "$MNT" >/dev/null 2>&1 || true' EXIT
-
-echo "Installing $BIN_NAME to $BINDIR (may require your password)..."
-sudo install -d "$BINDIR"
-sudo install "$MNT/$BIN_NAME" "$BINDIR/$BIN_NAME"
-
-echo "Installed: $BINDIR/$BIN_NAME"
-INSTALL
-chmod +x "$OUT_DIR/install.sh"
+# ── 6. Place the DMG on the Desktop ──────────────────────────────────────────
+DMG_DEST="$HOME/Desktop/$DMG_NAME"
+log "Writing $DMG_DEST..."
+mv "$DMG_PATH" "$DMG_DEST"
 
 # ── 7. Cleanup ────────────────────────────────────────────────────────────────
 rm -rf "$STAGING_DIR" "$ARCHIVE_PATH" "$EXPORT_PATH"
 
-log "Done. Packaged v${VERSION} (${BUILD}) → $OUT_DIR"
+log "Done. Packaged v${VERSION} (${BUILD}) → $DMG_DEST"
