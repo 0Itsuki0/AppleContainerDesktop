@@ -35,10 +35,6 @@ enum ComposeService {
         return []
     }
 
-    static func saveComposeResources(_ composes: [ComposeResource]) throws {
-        try self.addComposeResources(composes)
-    }
-
     // called when there might be a name change to a saved compose resource
     static func updateComposeResource(oldName: String?, new: ComposeResource)
         throws
@@ -48,6 +44,10 @@ enum ComposeService {
         // not deleting resources such as containers, as it meant for a name change (update), not removal
         allComposes.append(new)
         try saveComposeToUserDefaults(allComposes)
+    }
+
+    static func saveComposeResources(_ composes: [ComposeResource]) throws {
+        try self.addComposeResources(composes)
     }
 
     static func addComposeResources(_ composes: [ComposeResource]) throws {

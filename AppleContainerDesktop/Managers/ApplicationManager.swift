@@ -14,10 +14,9 @@ enum DisplayCategory: String, Identifiable, Equatable {
     case image
     case volume
     case network
-    
+
     // section 2
     case compose
-    
 
     var displayTitle: String {
         switch self {
@@ -53,7 +52,9 @@ enum DisplayCategory: String, Identifiable, Equatable {
         self.rawValue
     }
 
-    static let allCases: [[DisplayCategory]] = [[.image, .container, .volume, .network], [.compose]]
+    static let allCases: [[DisplayCategory]] = [
+        [.image, .container, .volume, .network], [.compose],
+    ]
 }
 
 @Observable
@@ -148,6 +149,56 @@ class ApplicationManager {
                     .defaultShutdownSystemTimeoutSeconds,
                 messageStreamContinuation: nil
             )
+        }
+    }
+
+    func onOpenURL(_ url: URL) {
+        do {
+            let scheme = try CustomURLScheme.from(url: url)
+            switch scheme {
+            case .compose(let file, let action):
+                try self.handleComposeURL(file: file, action: action)
+            }
+        } catch {
+            print("Error handling URL:", error)
+        }
+    }
+
+    private func handleComposeURL(file: URL, action: ComposeCommandAction?)
+        throws
+    {
+        let allComposes = ComposeService.listComposeResources()
+        let compose: ComposeResource
+        // existing
+        if let existing = allComposes.first(where: {
+            $0.baseCompose.absolutePath == file.absolutePath
+        }) {
+            compose = existing
+        } else {
+            // create new compose
+            compose = ComposeResource(
+                baseCompose: file,
+                projectDirectory: nil,
+                additionalComposes: [],
+                envFiles: [],
+                nameOverride: nil
+            )
+            // save the newly created one
+            try ComposeService.addComposeResources([compose])
+        }
+
+        self.pendingComposeAction = .init(
+            compose: compose,
+            actionCategory: action?.actionCategory ?? .inspect
+        )
+    }
+}
+
+extension ComposeCommandAction {
+    var actionCategory: ComposeActionCategory {
+        switch self {
+        case .up: .up
+        case .down: .down
         }
     }
 }

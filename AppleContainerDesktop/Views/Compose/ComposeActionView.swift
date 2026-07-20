@@ -114,7 +114,7 @@ struct ComposeActionView: View {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text(self.category.title)
+                        Text("\(self.category.title) \(compose.name)")
                             .font(.headline)
 
                         if compose.parsingError != nil {
@@ -160,7 +160,7 @@ struct ComposeActionView: View {
                     title: "Profiles",
                     subtitle:
                         """
-                        ⭑ Services without a `profiles` key are always enabled. 
+                        ⭑ Services without a `profiles` key are always included. 
                         ⭑ Profiled services are enabled only when one of their profiles is active. 
                         ⭑ \(self.category == .down ? "Services that depend on the selected ones will also be included." : "Services that the selected ones depend on will also be included.")
                         """,

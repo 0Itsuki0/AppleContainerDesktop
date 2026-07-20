@@ -60,7 +60,7 @@ extension ComposeResource: Hashable, Equatable {
 nonisolated
     final class ComposeResource: Identifiable, Codable, @unchecked Sendable
 {
-    var resourceStruct: ComposeResourceStruct {
+    fileprivate var resourceStruct: ComposeResourceStruct {
         return ComposeResourceStruct(resource: self)
     }
 

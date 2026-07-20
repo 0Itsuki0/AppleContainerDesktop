@@ -68,24 +68,66 @@
 		981C243A2FFB42A60070E6E4 /* SocketForwarder in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3812FF9F66C0044EC75 /* SocketForwarder */; };
 		981C243B2FFB42A60070E6E4 /* TerminalProgress in Frameworks */ = {isa = PBXBuildFile; productRef = 98AFA3832FF9F66C0044EC75 /* TerminalProgress */; };
 		981C24C52FFB42EC0070E6E4 /* DockerComposeParser in Frameworks */ = {isa = PBXBuildFile; productRef = 981C24C42FFB42EC0070E6E4 /* DockerComposeParser */; };
+		9884B967300DD08300DBCA20 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = 9884B966300DD08300DBCA20 /* ArgumentParser */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9884B95A300DCE4A00DBCA20 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AppleContainerDesktop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		983B3D142E71389C005E1934 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		983B3D152E71389C005E1934 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		9860436E2E6D4A8700FA9B43 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		9884B95C300DCE4A00DBCA20 /* ContainerDesktopCommand */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ContainerDesktopCommand; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9884B511300DCCDC00DBCA20 /* Exceptions for "AppleContainerDesktop" folder in "AppleContainerDesktop" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9829EC412E17BA3C00A9F8D3 /* AppleContainerDesktop */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9884B511300DCCDC00DBCA20 /* Exceptions for "AppleContainerDesktop" folder in "AppleContainerDesktop" target */,
+			);
 			path = AppleContainerDesktop;
 			sourceTree = "<group>";
 		};
 		9863C6DD2E711F3900C4AE3C /* ReadmeAssets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ReadmeAssets;
+			sourceTree = "<group>";
+		};
+		9884B95D300DCE4A00DBCA20 /* ContainerDesktopCommand */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ContainerDesktopCommand;
+			sourceTree = "<group>";
+		};
+		9884B96B300DE4F400DBCA20 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		9884C1FF300DF43900DBCA20 /* Tools */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Tools;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -159,17 +201,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9884B959300DCE4A00DBCA20 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9884B967300DD08300DBCA20 /* ArgumentParser in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		9829EC392E17BA3C00A9F8D3 = {
 			isa = PBXGroup;
 			children = (
+				9884C1FF300DF43900DBCA20 /* Tools */,
+				9884B96B300DE4F400DBCA20 /* Shared */,
 				983B3D142E71389C005E1934 /* .gitignore */,
 				983B3D152E71389C005E1934 /* LICENSE */,
 				9863C6DD2E711F3900C4AE3C /* ReadmeAssets */,
 				9860436E2E6D4A8700FA9B43 /* README.md */,
 				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+				9884B95D300DCE4A00DBCA20 /* ContainerDesktopCommand */,
 				986D17552E7BCB1000C8127F /* Frameworks */,
 				9829EC432E17BA3C00A9F8D3 /* Products */,
 			);
@@ -179,6 +232,7 @@
 			isa = PBXGroup;
 			children = (
 				9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */,
+				9884B95C300DCE4A00DBCA20 /* ContainerDesktopCommand */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -207,6 +261,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				9829EC442E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+				9884B96B300DE4F400DBCA20 /* Shared */,
 			);
 			name = AppleContainerDesktop;
 			packageProductDependencies = (
@@ -276,6 +331,30 @@
 			productReference = 9829EC422E17BA3C00A9F8D3 /* AppleContainerDesktop.app */;
 			productType = "com.apple.product-type.application";
 		};
+		9884B95B300DCE4A00DBCA20 /* ContainerDesktopCommand */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9884B960300DCE4A00DBCA20 /* Build configuration list for PBXNativeTarget "ContainerDesktopCommand" */;
+			buildPhases = (
+				9884B958300DCE4A00DBCA20 /* Sources */,
+				9884B959300DCE4A00DBCA20 /* Frameworks */,
+				9884B95A300DCE4A00DBCA20 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9884B95D300DCE4A00DBCA20 /* ContainerDesktopCommand */,
+				9884B96B300DE4F400DBCA20 /* Shared */,
+			);
+			name = ContainerDesktopCommand;
+			packageProductDependencies = (
+				9884B966300DD08300DBCA20 /* ArgumentParser */,
+			);
+			productName = ContainerDesktopCommand;
+			productReference = 9884B95C300DCE4A00DBCA20 /* ContainerDesktopCommand */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -283,11 +362,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2600;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					9829EC412E17BA3C00A9F8D3 = {
 						CreatedOnToolsVersion = 26.0;
+					};
+					9884B95B300DCE4A00DBCA20 = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -303,6 +385,7 @@
 			packageReferences = (
 				981C23E92FFB41FC0070E6E4 /* XCRemoteSwiftPackageReference "container" */,
 				981C24C32FFB42EC0070E6E4 /* XCLocalSwiftPackageReference "../DockerComposeParser" */,
+				9884B965300DD08300DBCA20 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9829EC432E17BA3C00A9F8D3 /* Products */;
@@ -310,6 +393,7 @@
 			projectRoot = "";
 			targets = (
 				9829EC412E17BA3C00A9F8D3 /* AppleContainerDesktop */,
+				9884B95B300DCE4A00DBCA20 /* ContainerDesktopCommand */,
 			);
 		};
 /* End PBXProject section */
@@ -326,6 +410,13 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		9829EC3E2E17BA3C00A9F8D3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9884B958300DCE4A00DBCA20 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -481,6 +572,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppleContainerDesktop/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -527,6 +619,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppleContainerDesktop/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -553,6 +646,36 @@
 			};
 			name = Release;
 		};
+		9884B961300DCE4A00DBCA20 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = NLTYK5T6U3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = itsuki.enjoy.AppleContainerDesktopCLI;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		9884B962300DCE4A00DBCA20 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = NLTYK5T6U3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = itsuki.enjoy.AppleContainerDesktopCLI;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -574,6 +697,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		9884B960300DCE4A00DBCA20 /* Build configuration list for PBXNativeTarget "ContainerDesktopCommand" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9884B961300DCE4A00DBCA20 /* Debug */,
+				9884B962300DCE4A00DBCA20 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -590,6 +722,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.0;
+			};
+		};
+		9884B965300DD08300DBCA20 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.8.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -708,6 +848,11 @@
 		981C24C42FFB42EC0070E6E4 /* DockerComposeParser */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DockerComposeParser;
+		};
+		9884B966300DD08300DBCA20 /* ArgumentParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9884B965300DD08300DBCA20 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
+			productName = ArgumentParser;
 		};
 		98AFA3592FF9F66C0044EC75 /* ContainerAPIClient */ = {
 			isa = XCSwiftPackageProductDependency;

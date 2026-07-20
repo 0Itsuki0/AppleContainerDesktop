@@ -54,12 +54,16 @@ struct EditComposeResourceView: View {
                     create: false
                 )
         }
-        
+
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(isNew ? "Add Compose" : "Edit Compose")
-                        .font(.headline)
+                    Text(
+                        isNew
+                            ? "Add Compose"
+                            : "Edit Compose \(existingCompose?.name, default: "")"
+                    )
+                    .font(.headline)
 
                     if let errorMessage = self.errorMessage {
                         Text(errorMessage)
