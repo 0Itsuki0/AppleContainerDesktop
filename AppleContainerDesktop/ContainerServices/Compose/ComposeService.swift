@@ -39,14 +39,24 @@ enum ComposeService {
         try self.addComposeResources(composes)
     }
 
+    // called when there might be a name change to a saved compose resource
+    static func updateComposeResource(oldName: String?, new: ComposeResource)
+        throws
+    {
+        var allComposes = listComposeResources()
+        allComposes.removeAll(where: { oldName == $0.name })
+        // not deleting resources such as containers, as it meant for a name change (update), not removal
+        allComposes.append(new)
+        try saveComposeToUserDefaults(allComposes)
+    }
+
     static func addComposeResources(_ composes: [ComposeResource]) throws {
         var allComposes = listComposeResources()
         allComposes.removeAll(where: { current in
             composes.contains(where: { $0.name == current.name })
         })
         allComposes = allComposes + composes
-        let data = try encoder.encode(allComposes)
-        userDefaults.set(data, forKey: userDefaultsKey)
+        try saveComposeToUserDefaults(allComposes)
     }
 
     static func composeResourceExist(name: String) -> Bool {
@@ -103,12 +113,18 @@ enum ComposeService {
         var allComposes = listComposeResources()
         allComposes.removeAll(where: { names.contains($0.name) })
 
-        let data = try encoder.encode(allComposes)
-        userDefaults.set(data, forKey: userDefaultsKey)
+        try saveComposeToUserDefaults(allComposes)
 
         messageStreamContinuation?.yield(
             "Composes removed!"
         )
+    }
+
+    private static func saveComposeToUserDefaults(_ composes: [ComposeResource])
+        throws
+    {
+        let data = try encoder.encode(composes)
+        userDefaults.set(data, forKey: userDefaultsKey)
     }
 
     static func resolveActiveProfiles(_ profile: [String]) -> Set<
@@ -144,20 +160,46 @@ enum ComposeService {
         try await deleteContainers(Array(leftovers))
     }
 
-    nonisolated
-    static func resolveProjectName(
-        projectDirectory: URL,
-        compose: DockerCompose?,
+    // additionalComposes doesn't matter in terms of project name
+    nonisolated static func resolveProjectName(
+        baseCompose: URL,
+        projectDirectory: URL?,
+        envFiles: [URL],
         nameOverride: String?
     ) -> String {
+        let projectDirectory =
+            projectDirectory ?? baseCompose.parentDirectory
+        let compose = try? ComposeParser.loadComposes(
+            baseCompose,
+            otherComposes: [],
+            envFiles: envFiles,
+            projectDirectory: projectDirectory,
+            nameOverride: nameOverride
+        )
+        return resolveProjectName(
+            projectDirectory: projectDirectory,
+            composeName: compose?.name,
+            nameOverride: nameOverride
+        )
+    }
+
+    // name override > compose.name > project directory
+    nonisolated
+        static func resolveProjectName(
+            projectDirectory: URL,
+            composeName: String?,
+            nameOverride: String?
+        ) -> String
+    {
         if let nameOverride {
             return nameOverride
         }
-        return compose?.name ?? deriveProjectName(url: projectDirectory)
+        return composeName ?? deriveProjectName(url: projectDirectory)
     }
 
     nonisolated
-    static func deriveProjectName(url: URL) -> String {
+        static func deriveProjectName(url: URL) -> String
+    {
         let url = !url.isDirectory ? url.parentDirectory : url
         // replace '.' with _ because it is not supported in the container name
         let projectName = url.lastPathComponent
@@ -271,11 +313,16 @@ enum ComposeService {
 
         var seedNames = requestedServices
         if seedNames.isEmpty {
-            seedNames = orderedNames.filter { name in
-                isProfileEligible(
-                    serviceProfiles: servicesByName[name]?.profiles,
-                    activeProfiles: activeProfiles
-                )
+            if activeProfiles.isEmpty {
+                // nothing requested at all -> tear down everything
+                seedNames = orderedNames
+            } else {
+                seedNames = orderedNames.filter { name in
+                    isProfileEligible(
+                        serviceProfiles: servicesByName[name]?.profiles,
+                        activeProfiles: activeProfiles
+                    )
+                }
             }
         }
 

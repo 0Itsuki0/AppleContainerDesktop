@@ -140,6 +140,8 @@ struct MultiFileSelectView: View {
     @Binding var errorMessage: String?
 
     var allowedContentTypes: [UTType]
+    
+    var defaultDirectory: URL?
 
     @State private var showImporter: Bool = false
 
@@ -242,14 +244,7 @@ struct MultiFileSelectView: View {
             }
         }
         .fileDialogBrowserOptions([.includeHiddenFiles])
-        .fileDialogDefaultDirectory(
-            (try? FileManager.default.url(
-                for: .desktopDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: false
-            ))
-        )
+        .fileDialogDefaultDirectory(self.defaultDirectory)
         .fileDialogConfirmationLabel(Text("Select"))
     }
 

@@ -50,7 +50,7 @@ extension ComposeService {
 
         let name = resolveProjectName(
             projectDirectory: projectDirectory,
-            compose: compose,
+            composeName: compose.name,
             nameOverride: nameOverride
         )
 

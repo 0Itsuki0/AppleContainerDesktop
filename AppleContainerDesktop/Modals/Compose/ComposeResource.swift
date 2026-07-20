@@ -27,7 +27,9 @@ struct ComposeResourceStruct: Equatable, Hashable {
     var runningContainers: [String: [ContainerSnapshotID]]
     var stoppedContainers: [String: [ContainerSnapshotID]]
 
-    init(resource: ComposeResource) {
+    nonisolated
+        init(resource: ComposeResource)
+    {
         self.name = resource.name
         self.baseCompose = resource.baseCompose
         self.projectDirectory = resource.projectDirectory
@@ -43,13 +45,13 @@ struct ComposeResourceStruct: Equatable, Hashable {
 
 extension ComposeResource: Hashable, Equatable {
     func hash(into hasher: inout Hasher) {
-        let resourceStruct = ComposeResourceStruct(resource: self)
+        let resourceStruct = self.resourceStruct
         hasher.combine(resourceStruct)
     }
 
     static func == (lhs: ComposeResource, rhs: ComposeResource) -> Bool {
-        let lhsStruct = ComposeResourceStruct(resource: lhs)
-        let rhsStruct = ComposeResourceStruct(resource: rhs)
+        let lhsStruct = lhs.resourceStruct
+        let rhsStruct = rhs.resourceStruct
         return lhsStruct == rhsStruct
     }
 }
@@ -58,6 +60,9 @@ extension ComposeResource: Hashable, Equatable {
 nonisolated
     final class ComposeResource: Identifiable, Codable, @unchecked Sendable
 {
+    var resourceStruct: ComposeResourceStruct {
+        return ComposeResourceStruct(resource: self)
+    }
 
     var id: String { name }
 
@@ -84,7 +89,7 @@ nonisolated
         let projectDirectory = projectDirectory ?? baseCompose.parentDirectory
         return ComposeService.resolveProjectName(
             projectDirectory: projectDirectory,
-            compose: parsedCompose,
+            composeName: parsedCompose?.name,
             nameOverride: nameOverride
         )
     }
@@ -120,7 +125,29 @@ nonisolated
         self.parseCompose()
     }
 
-    func parseCompose() {
+    func update(
+        baseCompose: URL,
+        projectDirectory: URL?,
+        additionalComposes: [URL],
+        envFiles: [URL],
+        nameOverride: String?
+    ) {
+        self.baseCompose = baseCompose
+        self.projectDirectory = projectDirectory
+        self.additionalComposes = additionalComposes
+        self.envFiles = envFiles
+        self.nameOverride =
+            nameOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty == true
+            ? nil
+            : nameOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        self.runningContainers = [:]
+        self.stoppedContainers = [:]
+        self.parseCompose()
+    }
+
+    func parseCompose(previousName: String? = nil) {
         let projectDirectory =
             projectDirectory ?? baseCompose.parentDirectory
 
@@ -132,8 +159,17 @@ nonisolated
                 projectDirectory: projectDirectory,
                 nameOverride: nameOverride
             )
-            self.refreshServiceStatus()
             self.parsingError = nil
+
+            Task.detached(priority: .userInitiated) { [weak self] in
+                guard let self else { return }
+                if let previousName, previousName != self.name {
+                    try? await ComposeService.updateComposeResource(
+                        oldName: previousName,
+                        new: self
+                    )
+                }
+            }
         } catch (let error) {
             print(error)
             self.parsingError = error.localizedDescription
@@ -149,6 +185,7 @@ nonisolated
         case nameOverride
         case runningContainers
         case stoppedContainers
+        case previousName
     }
 
     init(from decoder: any Decoder) throws {
@@ -177,7 +214,11 @@ nonisolated
             forKey: .stoppedContainers
         ).filter({ !$0.value.isEmpty })
 
-        self.parseCompose()
+        let previousName = try container.decodeIfPresent(
+            String.self,
+            forKey: .previousName
+        )
+        self.parseCompose(previousName: previousName)
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -189,10 +230,12 @@ nonisolated
         try container.encodeIfPresent(nameOverride, forKey: .nameOverride)
         try container.encode(runningContainers, forKey: .runningContainers)
         try container.encode(stoppedContainers, forKey: .stoppedContainers)
+        // preserve the parsed compose as well so that when there is a name changed (due to change within the compose, we can detect that as well)
+        try container.encode(name, forKey: .previousName)
     }
 }
 
-extension ComposeResource {
+nonisolated extension ComposeResource {
     // compose up: additive
     // ie: if service A was started, and then B starts,
     // both A and B will be running
@@ -257,18 +300,19 @@ extension ComposeResource {
 
     // 1. refresh container status (running, stopped, removed) on init
     // 2. check if any services defined in running/stopped container is not contained in the newly parsed docker compose anymore.
-    nonisolated
-        private func refreshServiceStatus()
-    {
+    //
+    // NOTE: manual refresh instead of after parsing to avoid processing-overhead
+    func refreshServiceStatus(onRunningChanged: (@Sendable () -> Void)?) {
+        print(#function)
         guard let compose = parsedCompose else { return }
         guard !self.runningContainers.isEmpty || !self.stoppedContainers.isEmpty
         else { return }
+        let previous = (self.runningContainers, self.stoppedContainers)
         var finalRunning = self.runningContainers
         var finalStopped = self.stoppedContainers
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-
             // Step 1: remove any services that are not declared in the new compose any more.
             let runningServices = Set(finalRunning.keys)
             let stoppedServices = Set(finalStopped.keys)
@@ -290,20 +334,38 @@ extension ComposeResource {
 
             await removeStaledContainers(containersToRemove)
 
+            print("before refreshing status: ", finalRunning)
+
             await refreshContainerStatus(
                 runningContainers: &finalRunning,
                 stoppedContainers: &finalStopped
             )
+            print(finalRunning)
+            self.runningContainers = finalRunning.filter({
+                !$0.value.isEmpty
+            })
+            self.stoppedContainers = finalStopped.filter({
+                !$0.value.isEmpty
+            })
 
-            await MainActor.run {
-                self.runningContainers = finalRunning.filter({ !$0.value.isEmpty })
-                self.stoppedContainers = finalStopped.filter({ !$0.value.isEmpty })
+            if self.runningContainers != previous.0
+                || self.stoppedContainers != previous.1
+            {
+                print("changed, save compose resource", self.runningContainers)
+                do {
+                    try await ComposeService.saveComposeResources([self])
+                    if self.runningContainers != previous.0 {
+                        onRunningChanged?()
+                    }
+                } catch {
+                    print("Error saving compose", error)
+                }
             }
         }
     }
 
     @concurrent
-    nonisolated private func removeStaledContainers(_ containers: [String])
+    private func removeStaledContainers(_ containers: [String])
         async
     {
         do {
@@ -330,7 +392,7 @@ extension ComposeResource {
     }
 
     @concurrent
-    nonisolated private func refreshContainerStatus(
+    private func refreshContainerStatus(
         runningContainers: inout [String: [String]],
         stoppedContainers: inout [String: [String]]
     ) async {
@@ -348,9 +410,14 @@ extension ComposeResource {
                             runningContainers[serviceName]?.removeAll(where: {
                                 $0 == container
                             })
-                            stoppedContainers[serviceName, default: []].append(
+                            if stoppedContainers[serviceName]?.contains(
                                 container
-                            )
+                            ) != true {
+                                stoppedContainers[serviceName, default: []]
+                                    .append(
+                                        container
+                                    )
+                            }
                         }
                     } else {
                         // container deleted else where
@@ -372,9 +439,14 @@ extension ComposeResource {
                             stoppedContainers[serviceName]?.removeAll(where: {
                                 $0 == container
                             })
-                            runningContainers[serviceName, default: []].append(
+                            if runningContainers[serviceName]?.contains(
                                 container
-                            )
+                            ) != true {
+                                runningContainers[serviceName, default: []]
+                                    .append(
+                                        container
+                                    )
+                            }
                         }
                     } else {
                         // container deleted else where

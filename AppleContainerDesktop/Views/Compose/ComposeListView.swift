@@ -92,7 +92,7 @@ struct ComposeListView: View {
 
                         Button(
                             action: {
-                                self.listComposes()
+                                self.listComposes(refreshContainerStatus: true)
                             },
                             label: {
                                 Image(
@@ -233,6 +233,7 @@ struct ComposeListView: View {
 
                     TableColumn(TableHelper.columnHeader("Running Services")) {
                         compose in
+
                         if compose.runningContainers.isEmpty {
                             Text("None")
                                 .foregroundStyle(.secondary)
@@ -263,10 +264,12 @@ struct ComposeListView: View {
                                             }
                                         )
                                     }
+
                                 }
                             }
                             .buttonStyle(.link)
                         }
+
                     }
                     .width(min: 120, ideal: 120, max: 160)
 
@@ -349,7 +352,9 @@ struct ComposeListView: View {
                                                         applicationManager
                                                         .messageStreamContinuation
                                                 )
-                                            self.listComposes()
+                                            self.listComposes(
+                                                refreshContainerStatus: false
+                                            )
                                             self.applicationManager
                                                 .showProgressView = false
                                         } catch (let error) {
@@ -397,25 +402,29 @@ struct ComposeListView: View {
                 }
             )
         }
-        .onChange(of: self.applicationManager.pendingComposeAction, initial: true) {
-            guard let action = self.applicationManager.pendingComposeAction else {
+        .onChange(
+            of: self.applicationManager.pendingComposeAction,
+            initial: true
+        ) {
+            guard let action = self.applicationManager.pendingComposeAction
+            else {
                 return
             }
-            
+
             switch action.actionCategory {
             case .up, .down:
                 self.showComposeActionView = action
             case .inspect:
                 self.searchText = action.compose.name
             }
-            
+
             self.applicationManager.pendingComposeAction = nil
         }
         .sheet(
             item: $showContainersForService,
             onDismiss: {
                 self.showContainersForService = nil
-                self.listComposes()
+                self.listComposes(refreshContainerStatus: false)
             },
             content: { param in
                 ServiceContainersView(
@@ -441,7 +450,7 @@ struct ComposeListView: View {
         .sheet(
             isPresented: $showAddComposeResourceView,
             onDismiss: {
-                self.listComposes()
+                self.listComposes(refreshContainerStatus: false)
             },
             content: {
                 EditComposeResourceView()
@@ -450,7 +459,7 @@ struct ComposeListView: View {
         .sheet(
             item: $showEditComposeResourceView,
             onDismiss: {
-                self.listComposes()
+                self.listComposes(refreshContainerStatus: false)
             },
             content: { resource in
                 EditComposeResourceView(composeResource: resource)
@@ -459,7 +468,7 @@ struct ComposeListView: View {
         .sheet(
             item: $showComposeActionView,
             onDismiss: {
-                self.listComposes()
+                self.listComposes(refreshContainerStatus: false)
             },
             content: { action in
                 ComposeActionView(
@@ -481,15 +490,34 @@ struct ComposeListView: View {
                     guard self.lastUpdated == nil else {
                         return
                     }
-                    self.listComposes()
+                    self.listComposes(refreshContainerStatus: true)
                 }
             }
         )
     }
 
-    private func listComposes() {
-        self.composes = ComposeService.listComposeResources()
+    private func listComposes(refreshContainerStatus: Bool) {
+        self.composes = (ComposeService.listComposeResources()).sorted(by: {
+            $0.name > $1.name
+        })
+
         self.lastUpdated = Date()
+        if refreshContainerStatus {
+            for compose in composes {
+                compose.refreshServiceStatus(onRunningChanged: {
+                    Task { @MainActor in
+                        if let index = self.composes.firstIndex(where: {
+                            $0.name == compose.name
+                        }) {
+                            // has to remove the row entirely to force view update
+                            self.composes.remove(at: index)
+                            try? await Task.sleep(for: .milliseconds(10))
+                            self.composes.insert(compose, at: index)
+                        }
+                    }
+                })
+            }
+        }
     }
 
     private func openFile(_ url: URL) {
@@ -683,8 +711,10 @@ private struct ServiceContainersView: View {
                         }
                     },
                     label: {
-                        Text("\(ComposeSubactionType.remove.actionTitle) Service")
-                            .padding(.horizontal, 2)
+                        Text(
+                            "\(ComposeSubactionType.remove.actionTitle) Service"
+                        )
+                        .padding(.horizontal, 2)
                     }
                 )
                 .buttonStyle(

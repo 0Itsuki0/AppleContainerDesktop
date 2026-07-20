@@ -11,19 +11,19 @@ import UniformTypeIdentifiers
 struct EditComposeResourceView: View {
 
     init(composeResource: ComposeResource) {
-        self.isNew = false
         self.existingCompose = composeResource
     }
 
     init() {
-        self.isNew = true
         self.existingCompose = nil
     }
 
     @Environment(ApplicationManager.self) private var applicationManager
     @Environment(\.dismiss) private var dismiss
 
-    private var isNew: Bool
+    private var isNew: Bool {
+        existingCompose == nil
+    }
     private var existingCompose: ComposeResource?
 
     @SwiftUI.State private var errorMessage: String?
@@ -37,9 +37,24 @@ struct EditComposeResourceView: View {
     @SwiftUI.State private var projectDirectory: URL?
     @SwiftUI.State private var nameOverride: String = ""
 
-    @SwiftUI.State private var conflictingName: String?
-
     var body: some View {
+        var defaultDirectory: URL? {
+            if let projectDirectory {
+                return projectDirectory
+            }
+            if let baseCompose {
+                return baseCompose.parentDirectory
+            }
+
+            return
+                try? FileManager.default.url(
+                    for: .desktopDirectory,
+                    in: .userDomainMask,
+                    appropriateFor: nil,
+                    create: false
+                )
+        }
+        
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -99,7 +114,8 @@ struct EditComposeResourceView: View {
                         MultiFileSelectView(
                             fileURLs: $additionalComposes,
                             errorMessage: $errorMessage,
-                            allowedContentTypes: [.yaml]
+                            allowedContentTypes: [.yaml],
+                            defaultDirectory: defaultDirectory
                         )
                         .onChange(of: additionalComposes) {
                             if let baseCompose,
@@ -126,7 +142,10 @@ struct EditComposeResourceView: View {
                         MultiFileSelectView(
                             fileURLs: $envFiles,
                             errorMessage: $errorMessage,
-                            allowedContentTypes: [.text]
+                            allowedContentTypes: [
+                                .text, .item, .content, .data,
+                            ],
+                            defaultDirectory: defaultDirectory
                         )
                     }
 
@@ -200,22 +219,6 @@ struct EditComposeResourceView: View {
             .padding(.all, 24)
             .scrollTargetLayout()
         }
-        .confirmationDialog(
-            "Name Conflict",
-            item: $conflictingName,
-            actions: { name in
-                // override (cancel action is provided by default)
-                Button(
-                    "Override",
-                    action: {
-                        self.handleSave(override: true)
-                    }
-                )
-            },
-            message: { name in
-                Text("Compose with name '\(name)' already exists.")
-            }
-        )
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .frame(width: 560)
         .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
@@ -253,6 +256,30 @@ struct EditComposeResourceView: View {
             ? nil
             : self.nameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        let composeName = ComposeService.resolveProjectName(
+            baseCompose: baseCompose,
+            projectDirectory: projectDirectory,
+            envFiles: envFiles,
+            nameOverride: nameOverride
+        )
+        print("composeName", composeName)
+
+        if ComposeService.composeResourceExist(name: composeName) {
+            if isNew || composeName != self.existingCompose?.name {
+                self.errorMessage =
+                    "A compose with the same name already exists."
+                return
+            }
+        }
+
+        if let existingCompose {
+            saveExisting(existingCompose, baseCompose: baseCompose)
+        } else {
+            saveNew(baseCompose: baseCompose)
+        }
+    }
+
+    private func saveNew(baseCompose: URL) {
         do {
             let compose = ComposeResource(
                 baseCompose: baseCompose,
@@ -261,16 +288,28 @@ struct EditComposeResourceView: View {
                 envFiles: envFiles,
                 nameOverride: nameOverride
             )
-
-            if !override,
-                ComposeService.composeResourceExist(name: compose.name),
-                compose.name != existingCompose?.name
-            {
-                self.conflictingName = compose.name
-                return
-            }
-
             try ComposeService.addComposeResources([compose])
+            self.dismiss()
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func saveExisting(_ current: ComposeResource, baseCompose: URL) {
+        let nameBeforeChange = current.name
+        do {
+            current.update(
+                baseCompose: baseCompose,
+                projectDirectory: projectDirectory,
+                additionalComposes: additionalComposes,
+                envFiles: envFiles,
+                nameOverride: nameOverride
+            )
+
+            try ComposeService.updateComposeResource(
+                oldName: nameBeforeChange,
+                new: current
+            )
             self.dismiss()
         } catch {
             self.errorMessage = error.localizedDescription
