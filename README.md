@@ -1,5 +1,7 @@
 # Apple Container Desktop: A GUI For Apple Container
 
+## ⭐ [2.0.0](https://github.com/0Itsuki0/AppleContainerDesktop/releases/tag/2.0.0) is released with Docker Compose support! ⭐
+
 A GUI for [Apple container](https://github.com/apple/container), a tool that we
 can use to create and run Linux containers as lightweight virtual machines on
 Mac.
@@ -263,4 +265,4 @@ Will be happy to know!
 
 - [A Simple GUI For Apple Container. Like the Docker Desktop!](https://medium.com/@itsuki.enjoy/a-simple-gui-for-apple-container-like-the-docker-desktop-f16148c8bcc0)
 - [Apple Container Usage In Details](https://medium.com/@itsuki.enjoy/apple-container-usage-in-details-ed3293aa8d3d)
-- [+ Compose Support! Said my Apple Container Desktop!]()
+- [+ Compose Support! Said my Apple Container Desktop!](https://medium.com/@itsuki.enjoy/docker-compose-support-said-my-apple-container-desktop-db5b12b216aa)
