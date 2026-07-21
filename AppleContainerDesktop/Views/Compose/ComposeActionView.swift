@@ -43,7 +43,6 @@ enum ComposeActionCategory: String {
             "Compose"
         }
     }
-
 }
 
 enum ComposeSubactionType: String, Identifiable {
@@ -110,129 +109,85 @@ struct ComposeActionView: View {
     @SwiftUI.State private var forceRecreate: Bool = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("\(self.category.title) \(compose.name)")
-                            .font(.headline)
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("\(self.category.title) \(compose.name)")
+                        .font(.headline)
 
-                        if compose.parsingError != nil {
-                            Button(
-                                action: {
-                                    self.compose.parseCompose()
-                                },
-                                label: {
-                                    Image(
-                                        systemName:
-                                            "arrow.trianglehead.clockwise.rotate.90"
-                                    )
-                                    .font(.subheadline)
-                                    .contentShape(.circle)
-                                }
-                            )
-                            .buttonStyle(.link)
-                        }
-                    }
-
-                    if let errorMessage = self.errorMessage {
-                        Text(errorMessage)
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
+                    if compose.parsingError != nil {
+                        Button(
+                            action: {
+                                self.compose.parseCompose()
+                            },
+                            label: {
+                                Image(
+                                    systemName:
+                                        "arrow.trianglehead.clockwise.rotate.90"
+                                )
+                                .font(.subheadline)
+                                .contentShape(.circle)
+                            }
+                        )
+                        .buttonStyle(.link)
                     }
                 }
 
-                self.stringListSection(
-                    title: "Services",
-                    subtitle:
-                        """
-                        ⭑ If empty, all services will be included.
-                        ⭑ Explicitly targeting a service by name always bypasses profile restrictions.
-                        ⭑ \(self.category == .down ? "Services that depend on the selected ones will also be included." : "Services that the selected ones depend on will also be included.")
-                        """,
-                    values: $requestedServices,
-                    allValues: self.allServices
-                )
-
-                Divider()
-
-                self.stringListSection(
-                    title: "Profiles",
-                    subtitle:
-                        """
-                        ⭑ Services without a `profiles` key are always included. 
-                        ⭑ Profiled services are enabled only when one of their profiles is active. 
-                        ⭑ \(self.category == .down ? "Services that depend on the selected ones will also be included." : "Services that the selected ones depend on will also be included.")
-                        """,
-                    values: $requestedProfiles,
-                    allValues: self.allProfiles
-                )
-
-                Divider()
-
-                if category == .up {
-                    Toggle(
-                        isOn: $forceRebuild,
-                        label: {
-                            Text("Force rebuild (image only)")
-                        }
-                    )
-                    .toggleStyle(.checkbox)
-
-                    Toggle(
-                        isOn: $forceRecreate,
-                        label: {
-                            Text("Force recreate (volume and network)")
-                        }
-                    )
-                    .toggleStyle(.checkbox)
-
-                    Divider()
+                if let errorMessage = self.errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
                 }
+            }
+            .padding(.horizontal, 24)
 
-                HStack(spacing: 16) {
+            self.mainSection
+
+            Divider()
+                .padding(.horizontal, 24)
+
+            HStack(spacing: 16) {
+                Button(
+                    action: {
+                        self.dismiss()
+                    },
+                    label: {
+                        Text("Cancel")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .secondary
+                    )
+                )
+
+                ForEach(self.category.actionTypes) { type in
                     Button(
                         action: {
-                            self.dismiss()
+                            self.handleAction(type)
                         },
                         label: {
-                            Text("Cancel")
+                            Text(type.actionTitle)
                                 .padding(.horizontal, 2)
                         }
                     )
                     .buttonStyle(
                         CustomButtonStyle(
                             backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .secondary
+                            backgroundColor: .blue
                         )
                     )
-
-                    ForEach(self.category.actionTypes) { type in
-                        Button(
-                            action: {
-                                self.handleAction(type)
-                            },
-                            label: {
-                                Text(type.actionTitle)
-                                    .padding(.horizontal, 2)
-                            }
-                        )
-                        .buttonStyle(
-                            CustomButtonStyle(
-                                backgroundShape: .roundedRectangle(4),
-                                backgroundColor: .blue
-                            )
-                        )
-                        .disabled(self.compose.parsingError != nil)
-                    }
+                    .disabled(self.compose.parsingError != nil)
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
             }
-            .multilineTextAlignment(.leading)
-            .padding(.all, 24)
-            .scrollTargetLayout()
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 24)
+
         }
+        .multilineTextAlignment(.leading)
+        .padding(.vertical, 24)
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .frame(width: 560)
         .fixedSize(horizontal: false, vertical: false)
@@ -396,7 +351,7 @@ struct ComposeActionView: View {
             // Services without a 'profiles' key are always enabled;
             // profiled services are enabled only when one of their profiles is active.
             requestedProfiles: requestedProfiles,
-            startedContainers: self.compose.runningContainers,
+            startedContainers: compose.startedContainers,
             messageStreamContinuation: applicationManager
                 .messageStreamContinuation
         )
@@ -420,10 +375,71 @@ struct ComposeActionView: View {
             // Services without a 'profiles' key are always enabled;
             // profiled services are enabled only when one of their profiles is active.
             requestedProfiles: requestedProfiles,
-            startedContainers: self.compose.runningContainers,
+            startedContainers: compose.startedContainers,
             messageStreamContinuation: applicationManager
                 .messageStreamContinuation
         )
         compose.onRemove(removedServices: removedServices)
+    }
+
+    @ContentBuilder
+    private var mainSection: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+
+                self.stringListSection(
+                    title: "Services",
+                    subtitle:
+                        """
+                        ⭑ If empty, all services will be included.
+                        ⭑ Explicitly targeting a service by name always bypasses profile restrictions.
+                        ⭑ \(self.category == .down ? "Services that depend on the selected ones will also be included." : "Services that the selected ones depend on will also be included.")
+                        """,
+                    values: $requestedServices,
+                    allValues: self.allServices
+                )
+
+                Divider()
+
+                self.stringListSection(
+                    title: "Profiles",
+                    subtitle:
+                        """
+                        ⭑ Services without a `profiles` key are always included. 
+                        ⭑ Profiled services are enabled only when one of their profiles is active. 
+                        ⭑ \(self.category == .down ? "Services that depend on the selected ones will also be included." : "Services that the selected ones depend on will also be included.")
+                        """,
+                    values: $requestedProfiles,
+                    allValues: self.allProfiles
+                )
+
+                if category == .up {
+                    Divider()
+
+                    Toggle(
+                        isOn: $forceRebuild,
+                        label: {
+                            Text("Force rebuild (image only)")
+                        }
+                    )
+                    .toggleStyle(.checkbox)
+
+                    Toggle(
+                        isOn: $forceRecreate,
+                        label: {
+                            Text("Force recreate (volume and network)")
+                        }
+                    )
+                    .toggleStyle(.checkbox)
+                }
+
+            }
+            .multilineTextAlignment(.leading)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 4)
+            .scrollTargetLayout()
+        }
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+
     }
 }

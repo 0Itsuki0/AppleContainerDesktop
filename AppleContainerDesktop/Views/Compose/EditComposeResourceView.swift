@@ -38,6 +38,164 @@ struct EditComposeResourceView: View {
     @SwiftUI.State private var nameOverride: String = ""
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(
+                    isNew
+                        ? "Add Compose"
+                        : "Edit Compose \(existingCompose?.name, default: "")"
+                )
+                .font(.headline)
+
+                if let errorMessage = self.errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                }
+            }
+            .padding(.horizontal, 24)
+
+            self.mainSection
+
+            Divider()
+                .padding(.horizontal, 24)
+
+            HStack(spacing: 16) {
+                Button(
+                    action: {
+                        self.dismiss()
+                    },
+                    label: {
+                        Text("Cancel")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .secondary
+                    )
+                )
+
+                Button(
+                    action: { self.handleSave() },
+                    label: {
+                        Text("Save")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .blue
+                    )
+                )
+                .disabled(self.baseCompose == nil)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 24)
+
+        }
+        .multilineTextAlignment(.leading)
+        .padding(.vertical, 24)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        .frame(width: 560)
+        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
+        .frame(maxHeight: 440)
+        .onChange(of: self.existingCompose, initial: true) {
+            if let composeResource = existingCompose {
+                self.baseCompose = composeResource.baseCompose
+                self.additionalComposes = composeResource.additionalComposes
+                self.envFiles = composeResource.envFiles
+                self.projectDirectory = composeResource.projectDirectory
+                self.nameOverride = composeResource.nameOverride ?? ""
+            } else {
+                self.baseCompose = nil
+                self.additionalComposes = []
+                self.envFiles = []
+                self.projectDirectory = nil
+                self.nameOverride = ""
+            }
+        }
+        .animation(.default, value: self.additionalComposes.count)
+        .animation(.default, value: self.envFiles.count)
+        .interactiveDismissDisabled()
+    }
+
+    private func handleSave(override: Bool = false) {
+        guard let baseCompose else {
+            self.errorMessage =
+                "Base compose file is required."
+            return
+        }
+
+        let nameOverride =
+            self.nameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty
+            ? nil
+            : self.nameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let composeName = ComposeService.resolveProjectName(
+            baseCompose: baseCompose,
+            projectDirectory: projectDirectory,
+            envFiles: envFiles,
+            nameOverride: nameOverride
+        )
+
+        if ComposeService.composeResourceExist(name: composeName) {
+            if isNew || composeName != self.existingCompose?.name {
+                self.errorMessage =
+                    "A compose with the same name already exists."
+                return
+            }
+        }
+
+        if let existingCompose {
+            saveExisting(existingCompose, baseCompose: baseCompose)
+        } else {
+            saveNew(baseCompose: baseCompose)
+        }
+    }
+
+    private func saveNew(baseCompose: URL) {
+        do {
+            let compose = ComposeResource(
+                baseCompose: baseCompose,
+                projectDirectory: projectDirectory,
+                additionalComposes: additionalComposes,
+                envFiles: envFiles,
+                nameOverride: nameOverride
+            )
+            try ComposeService.addComposeResources([compose])
+            self.dismiss()
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func saveExisting(_ current: ComposeResource, baseCompose: URL) {
+        let nameBeforeChange = current.name
+        do {
+            current.update(
+                baseCompose: baseCompose,
+                projectDirectory: projectDirectory,
+                additionalComposes: additionalComposes,
+                envFiles: envFiles,
+                nameOverride: nameOverride
+            )
+
+            try ComposeService.updateComposeResource(
+                oldName: nameBeforeChange,
+                new: current
+            )
+            self.dismiss()
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+
+    @ContentBuilder
+    private var mainSection: some View {
         var defaultDirectory: URL? {
             if let projectDirectory {
                 return projectDirectory
@@ -57,20 +215,6 @@ struct EditComposeResourceView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(
-                        isNew
-                            ? "Add Compose"
-                            : "Edit Compose \(existingCompose?.name, default: "")"
-                    )
-                    .font(.headline)
-
-                    if let errorMessage = self.errorMessage {
-                        Text(errorMessage)
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
-                    }
-                }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Base Compose File")
@@ -178,144 +322,13 @@ struct EditComposeResourceView: View {
                             label: {}
                         )
                     }
-
                 }
-
-                Divider()
-
-                HStack(spacing: 16) {
-                    Button(
-                        action: {
-                            self.dismiss()
-                        },
-                        label: {
-                            Text("Cancel")
-                                .padding(.horizontal, 2)
-                        }
-                    )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .secondary
-                        )
-                    )
-
-                    Button(
-                        action: { self.handleSave() },
-                        label: {
-                            Text("Save")
-                                .padding(.horizontal, 2)
-                        }
-                    )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .blue
-                        )
-                    )
-                    .disabled(self.baseCompose == nil)
-                }
-
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
             }
             .multilineTextAlignment(.leading)
-            .padding(.all, 24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 4)
             .scrollTargetLayout()
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .frame(width: 560)
-        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
-        .frame(maxHeight: 440)
-        .onChange(of: self.existingCompose, initial: true) {
-            if let composeResource = existingCompose {
-                self.baseCompose = composeResource.baseCompose
-                self.additionalComposes = composeResource.additionalComposes
-                self.envFiles = composeResource.envFiles
-                self.projectDirectory = composeResource.projectDirectory
-                self.nameOverride = composeResource.nameOverride ?? ""
-            } else {
-                self.baseCompose = nil
-                self.additionalComposes = []
-                self.envFiles = []
-                self.projectDirectory = nil
-                self.nameOverride = ""
-            }
-        }
-        .animation(.default, value: self.additionalComposes.count)
-        .animation(.default, value: self.envFiles.count)
-        .interactiveDismissDisabled()
-    }
-
-    private func handleSave(override: Bool = false) {
-        guard let baseCompose else {
-            self.errorMessage =
-                "Base compose file is required."
-            return
-        }
-
-        let nameOverride =
-            self.nameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
-                .isEmpty
-            ? nil
-            : self.nameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let composeName = ComposeService.resolveProjectName(
-            baseCompose: baseCompose,
-            projectDirectory: projectDirectory,
-            envFiles: envFiles,
-            nameOverride: nameOverride
-        )
-
-        if ComposeService.composeResourceExist(name: composeName) {
-            if isNew || composeName != self.existingCompose?.name {
-                self.errorMessage =
-                    "A compose with the same name already exists."
-                return
-            }
-        }
-
-        if let existingCompose {
-            saveExisting(existingCompose, baseCompose: baseCompose)
-        } else {
-            saveNew(baseCompose: baseCompose)
-        }
-    }
-
-    private func saveNew(baseCompose: URL) {
-        do {
-            let compose = ComposeResource(
-                baseCompose: baseCompose,
-                projectDirectory: projectDirectory,
-                additionalComposes: additionalComposes,
-                envFiles: envFiles,
-                nameOverride: nameOverride
-            )
-            try ComposeService.addComposeResources([compose])
-            self.dismiss()
-        } catch {
-            self.errorMessage = error.localizedDescription
-        }
-    }
-
-    private func saveExisting(_ current: ComposeResource, baseCompose: URL) {
-        let nameBeforeChange = current.name
-        do {
-            current.update(
-                baseCompose: baseCompose,
-                projectDirectory: projectDirectory,
-                additionalComposes: additionalComposes,
-                envFiles: envFiles,
-                nameOverride: nameOverride
-            )
-
-            try ComposeService.updateComposeResource(
-                oldName: nameBeforeChange,
-                new: current
-            )
-            self.dismiss()
-        } catch {
-            self.errorMessage = error.localizedDescription
-        }
     }
 }

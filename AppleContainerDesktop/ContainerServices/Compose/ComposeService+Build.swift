@@ -394,19 +394,11 @@ extension ComposeService {
             return existing
         }
 
-        if network.enable_ipv4 == true, network.ipv4 == nil {
+        if network.enable_ipv4 == true || network.enable_ipv6 == true {
             throw ContainerizationError(
                 .invalidArgument,
                 message:
-                    "Container requires explicit IPv4 address when enabled."
-            )
-        }
-
-        if network.enable_ipv6 == true, network.ipv6 == nil {
-            throw ContainerizationError(
-                .invalidArgument,
-                message:
-                    "Container requires explicit IPv6 address when enabled."
+                    "Apple container does not support disabling IPv4 or IPv6 networks."
             )
         }
 
@@ -420,8 +412,8 @@ extension ComposeService {
             internal: network.internal ?? false,
             labels: network.labels?.removeNilValue() ?? [:],
             options: network.driver_opts?.removeNilValue() ?? [:],
-            ipv4Subnet: (network.enable_ipv4 ?? false) ? ipv4 : nil,
-            ipv6Subnet: (network.enable_ipv6 ?? false) ? ipv6 : nil,
+            ipv4Subnet: ipv4,
+            ipv6Subnet: ipv6,
             messageStreamContinuation: nil
         )
     }

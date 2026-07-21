@@ -38,7 +38,6 @@ struct ContainerDetailView: View {
                 let compose = ComposeService.runningByCompose(
                     containerName: container.name
                 )
-
                 VStack(alignment: .leading, spacing: 16) {
 
                     HStack {
@@ -80,7 +79,7 @@ struct ContainerDetailView: View {
                                             )
                                     },
                                     label: {
-                                        Text("Used by Compose")
+                                        Text("Compose resource")
                                     }
                                 )
                                 .buttonStyle(.link)
@@ -306,175 +305,171 @@ struct ContainerDetailView: View {
         _ container: ContainerDisplayModel
     ) -> some View {
         ScrollView {
-            VStack(
-                alignment: .leading,
-                spacing: 16,
-                content: {
-                    let environments = KeyValueModel.fromContainerEnv(
-                        container.container
+            VStack(alignment: .leading, spacing: 16) {
+                let environments = KeyValueModel.fromContainerEnv(
+                    container.container
+                )
+                let ports = KeyValueModel.fromContainerPorts(
+                    container.container
+                )
+
+                Section {
+                    KeyValuesDisplayView(
+                        keyValues: environments,
+                        emptyText: "No environments added",
+                        leftColumnWidth: self.leftColumnWidth
                     )
-                    let ports = KeyValueModel.fromContainerPorts(
-                        container.container
+                } header: {
+                    sectionHeader(
+                        title: "Environment",
+                        subtitle: "Key=Value"
                     )
+                }
 
-                    Section {
-                        KeyValuesDisplayView(
-                            keyValues: environments,
-                            emptyText: "No environments added",
-                            leftColumnWidth: self.leftColumnWidth
-                        )
-                    } header: {
-                        sectionHeader(
-                            title: "Environment",
-                            subtitle: "Key=Value"
-                        )
-                    }
+                Spacer()
+                    .frame(height: 8)
 
-                    Spacer()
-                        .frame(height: 8)
+                Section {
+                    KeyValuesDisplayView(
+                        keyValues: ports,
+                        emptyText: "No ports added",
+                        leftColumnWidth: self.leftColumnWidth
+                    )
+                } header: {
+                    sectionHeader(
+                        title: "Ports",
+                        subtitle: "Host:Container[Protocol]"
+                    )
+                }
 
-                    Section {
-                        KeyValuesDisplayView(
-                            keyValues: ports,
-                            emptyText: "No ports added",
-                            leftColumnWidth: self.leftColumnWidth
-                        )
-                    } header: {
-                        sectionHeader(
-                            title: "Ports",
-                            subtitle: "Host:Container[Protocol]"
-                        )
-                    }
+                Spacer()
+                    .frame(height: 8)
 
-                    Spacer()
-                        .frame(height: 8)
+                Section {
+                    let volumeFSs = container.container.volumeFSs
+                    VStack(alignment: .leading, spacing: 16) {
 
-                    Section {
-                        let volumeFSs = container.container.volumeFSs
-                        VStack(alignment: .leading, spacing: 16) {
-
-                            if volumeFSs.isEmpty {
-                                Text("No volume binded")
-                                    .multilineTextAlignment(.leading)
-                                    .frame(
-                                        maxWidth: .infinity,
-                                        alignment: .leading
-                                    )
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 16)
-                            }
-
-                            ForEach(0..<volumeFSs.count, id: \.self) { index in
-                                let fileSystem: Filesystem = volumeFSs[index]
-                                if let name = fileSystem.volumeName {
-                                    HStack {
-                                        Text(name)
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(
-                                                width: self.leftColumnWidth,
-                                                alignment: .leading
-                                            )
-                                            .foregroundStyle(.secondary)
-
-                                        let fileURL = URL(
-                                            filePath: fileSystem.source
-                                        )
-
-                                        HStack(spacing: 8) {
-                                            Text(
-                                                "\(fileSystem.source)\(fileSystem.destination)"
-                                            )
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .frame(maxWidth: 240)
-
-                                            Button {
-                                                self.openFile(fileURL)
-                                            } label: {
-                                                Image(systemName: "arrow.right")
-                                                    .contentShape(Rectangle())
-                                                    .fontWeight(.semibold)
-                                            }
-                                            .buttonStyle(.link)
-                                        }
-                                    }
-                                    .padding(.horizontal, 16)
-
-                                    Divider()
-                                }
-                            }
+                        if volumeFSs.isEmpty {
+                            Text("No volume binded")
+                                .multilineTextAlignment(.leading)
+                                .frame(
+                                    maxWidth: .infinity,
+                                    alignment: .leading
+                                )
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 16)
                         }
-                    } header: {
-                        sectionHeader(title: "Volumes", subtitle: nil)
-                    }
 
-                    Spacer()
-                        .frame(height: 8)
-
-                    Section {
-                        // what the container is configured to attach to.
-                        // Always populated, even when the container is stopped.
-                        let networks = container.container.configuration
-                            .networks
-                        // the runtime attachments the network plugin actually created.
-                        // Only populated while the container is running, and it's the only place the assigned IPv4 address and hostname live.
-                        let attachments = container.container.networks
-
-                        VStack(alignment: .leading, spacing: 16) {
-
-                            if networks.isEmpty {
-                                Text("No network attached")
-                                    .multilineTextAlignment(.leading)
-                                    .frame(
-                                        maxWidth: .infinity,
-                                        alignment: .leading
-                                    )
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 16)
-
-                            }
-                            ForEach(0..<networks.count, id: \.self) { index in
-                                let network = networks[index]
+                        ForEach(0..<volumeFSs.count, id: \.self) { index in
+                            let fileSystem: Filesystem = volumeFSs[index]
+                            if let name = fileSystem.volumeName {
                                 HStack {
-                                    Text(
-                                        "\(network.network)  (\(network.options.hostname))"
-                                    )
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                    .frame(
-                                        width: self.leftColumnWidth,
-                                        alignment: .leading
-                                    )
-                                    .foregroundStyle(.secondary)
+                                    Text(name)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                        .frame(
+                                            width: self.leftColumnWidth,
+                                            alignment: .leading
+                                        )
+                                        .foregroundStyle(.secondary)
 
-                                    if let attachment = attachments.first(
-                                        where: {
-                                            $0.network == network.network
-                                        })
-                                    {
+                                    let fileURL = URL(
+                                        filePath: fileSystem.source
+                                    )
+
+                                    HStack(spacing: 8) {
                                         Text(
-                                            "\(attachment.ipv4Address.description)"
+                                            "\(fileSystem.source)\(fileSystem.destination)"
                                         )
                                         .lineLimit(1)
                                         .truncationMode(.middle)
-                                    } else {
-                                        Text("(Not attached)")
-                                            .foregroundStyle(.secondary)
+                                        .frame(maxWidth: 240)
+
+                                        Button {
+                                            self.openFile(fileURL)
+                                        } label: {
+                                            Image(systemName: "arrow.right")
+                                                .contentShape(Rectangle())
+                                                .fontWeight(.semibold)
+                                        }
+                                        .buttonStyle(.link)
                                     }
                                 }
                                 .padding(.horizontal, 16)
+
                                 Divider()
                             }
                         }
-                    } header: {
-                        sectionHeader(
-                            title: "Networks",
-                            subtitle: "IPv4-Address (Hostname)"
-                        )
                     }
+                } header: {
+                    sectionHeader(title: "Volumes", subtitle: nil)
                 }
-            )
+
+                Spacer()
+                    .frame(height: 8)
+
+                Section {
+                    // what the container is configured to attach to.
+                    // Always populated, even when the container is stopped.
+                    let networks = container.container.configuration
+                        .networks
+                    // the runtime attachments the network plugin actually created.
+                    // Only populated while the container is running, and it's the only place the assigned IPv4 address and hostname live.
+                    let attachments = container.container.networks
+
+                    VStack(alignment: .leading, spacing: 16) {
+
+                        if networks.isEmpty {
+                            Text("No network attached")
+                                .multilineTextAlignment(.leading)
+                                .frame(
+                                    maxWidth: .infinity,
+                                    alignment: .leading
+                                )
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 16)
+
+                        }
+                        ForEach(0..<networks.count, id: \.self) { index in
+                            let network = networks[index]
+                            HStack {
+                                Text(
+                                    "\(network.network)  (\(network.options.hostname))"
+                                )
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .frame(
+                                    width: self.leftColumnWidth,
+                                    alignment: .leading
+                                )
+                                .foregroundStyle(.secondary)
+
+                                if let attachment = attachments.first(
+                                    where: {
+                                        $0.network == network.network
+                                    })
+                                {
+                                    Text(
+                                        "\(attachment.ipv4Address.description)"
+                                    )
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                } else {
+                                    Text("(Not attached)")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            Divider()
+                        }
+                    }
+                } header: {
+                    sectionHeader(
+                        title: "Networks",
+                        subtitle: "IPv4-Address (Hostname)"
+                    )
+                }
+            }
             .scrollTargetLayout()
             .padding(.all, 8)
             .padding(.bottom, 16)
@@ -517,7 +512,6 @@ private struct ContainerLogsView: View {
 
             } else {
                 ScrollView {
-
                     VStack(alignment: .leading) {
                         Text(logs)
                             .multilineTextAlignment(.leading)
@@ -529,7 +523,6 @@ private struct ContainerLogsView: View {
                     .foregroundStyle(.secondary)
                     .scrollTargetLayout()
                     .padding(.all, 8)
-
                 }
                 .defaultScrollAnchor(.bottom, for: .initialOffset)
                 .defaultScrollAnchor(.bottom, for: .sizeChanges)

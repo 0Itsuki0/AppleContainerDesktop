@@ -80,249 +80,222 @@ struct CreateContainerView: View {
     @SwiftUI.State private var networkInitialized: Bool = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading) {
-                    Text("Create New Container")
-                        .font(.headline)
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading) {
+                Text("Create New Container")
+                    .font(.headline)
 
-                    if let errorMessage = self.errorMessage {
-                        Text(errorMessage)
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
-
-                    }
+                if let errorMessage = self.errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
                 }
+            }
+            .padding(.horizontal, 24)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .lastTextBaseline) {
-                        Text("Image Name")
-                        Text("Local or Remote")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+            self.mainSection
+
+            Divider()
+                .padding(.horizontal, 24)
+
+            HStack(spacing: 16) {
+                Button(
+                    action: {
+                        self.dismiss()
+                    },
+                    label: {
+                        Text("Cancel")
+                            .padding(.horizontal, 2)
                     }
-
-                    HStack(spacing: 16) {
-                        TextField(
-                            text: $imageReference,
-                            prompt: Text("Ex: alpine:latest"),
-                            label: {}
-                        )
-                        .frame(maxHeight: .infinity)
-                        Button(
-                            action: {
-                                Task {
-                                    do {
-                                        self.showProgressView = true
-                                        self.localImages =
-                                            try await ImageService.listImages()
-                                        self.showProgressView = false
-                                        self.showPickLocalImage = true
-                                    } catch (let error) {
-                                        self.errorMessage = "\(error)"
-                                    }
-                                }
-                            },
-                            label: {
-                                Image(systemName: "ellipsis")
-                                    .padding(.horizontal, 2)
-                                    .frame(maxHeight: .infinity)
-                            }
-                        )
-                        .buttonStyle(
-                            CustomButtonStyle(
-                                backgroundShape: .roundedRectangle(4),
-                                backgroundColor: .secondary
-                            )
-                        )
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Divider()
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .secondary
+                    )
+                )
 
                 Button(
                     action: {
-                        showAdditionalSettings.toggle()
-                    },
-                    label: {
-                        HStack {
-                            Text("Optional Settings")
-                            Spacer()
-                            Image(
-                                systemName: showAdditionalSettings
-                                    ? "chevron.up" : "chevron.down"
+                        let trimmedReference =
+                            imageReference.trimmingCharacters(
+                                in: .whitespacesAndNewlines
                             )
-                            .padding(.trailing, 4)
+                        guard !trimmedReference.isEmpty else {
+                            self.errorMessage = "Image is not specified."
+                            return
                         }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                )
-                .buttonStyle(.plain)
+                        Task {
+                            self.showProgressView = true
 
-                if showAdditionalSettings {
-                    self.additionalSettings
-                }
+                            do {
+                                var validVolumeFSs: [Filesystem] = []
+                                let mountOptions: [String] = []
 
-                Divider()
-
-                HStack(spacing: 16) {
-                    Button(
-                        action: {
-                            self.dismiss()
-                        },
-                        label: {
-                            Text("Cancel")
-                                .padding(.horizontal, 2)
-                        }
-                    )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .secondary
-                        )
-                    )
-
-                    Button(
-                        action: {
-                            let trimmedReference =
-                                imageReference.trimmingCharacters(
-                                    in: .whitespacesAndNewlines
-                                )
-                            guard !trimmedReference.isEmpty else {
-                                self.errorMessage = "Image is not specified."
-                                return
-                            }
-                            Task {
-                                self.showProgressView = true
-
-                                do {
-                                    var validVolumeFSs: [Filesystem] = []
-                                    let mountOptions: [String] = []
-
-                                    for volumeConfig in self.volumes {
-                                        var volume: VolumeConfiguration
-                                        if let first = self.availableVolumes
-                                            .first(where: {
-                                                $0.name == volumeConfig.name
-                                            })
-                                        {
-                                            volume = first
-                                        } else {
-                                            var trimmedName = volumeConfig.name
-                                                .trimmingCharacters(
-                                                    in: .whitespacesAndNewlines
-                                                )
-                                            var labels: [KeyValueModel] = []
-
-                                            if trimmedName.isEmpty {
-                                                trimmedName =
-                                                    VolumeStorage
-                                                    .generateAnonymousVolumeName()
-                                                labels.append(
-                                                    .init(
-                                                        key: VolumeConfiguration
-                                                            .anonymousLabel
-                                                    )
-                                                )
-                                            }
-
-                                            volume =
-                                                try await VolumeService
-                                                .createVolume(
-                                                    name: trimmedName,
-                                                    labels: labels.dictRepresentation,
-                                                    options: [:],
-                                                    size: nil,
-                                                    messageStreamContinuation:
-                                                        self.applicationManager
-                                                        .messageStreamContinuation
-                                                )
-                                        }
-
-                                        let fs = Filesystem.volume(
-                                            name: volume.name,
-                                            format: volume.format,
-                                            source: volume.source,
-                                            destination: volumeConfig.path,
-                                            options: mountOptions
-                                        )
-
-                                        validVolumeFSs.append(fs)
+                                for volumeConfig in self.volumes {
+                                    if validVolumeFSs.contains(where: {
+                                        $0.volumeName == volumeConfig.name
+                                    }) {
+                                        continue
                                     }
-
-                                    self.management.volumes = validVolumeFSs
-
-                                    self.management.networks = self.networks
-                                        .map({
-                                            $0.name.trimmingCharacters(
+                                    var volume: VolumeConfiguration
+                                    if let first = self.availableVolumes
+                                        .first(where: {
+                                            $0.name == volumeConfig.name
+                                        })
+                                    {
+                                        volume = first
+                                    } else {
+                                        var trimmedName = volumeConfig.name
+                                            .trimmingCharacters(
                                                 in: .whitespacesAndNewlines
                                             )
-                                        })
-                                        .filter({ !$0.isEmpty })
+                                        var labels: [KeyValueModel] = []
 
-                                    let validPorts = self.ports.filter({
-                                        $0.host > 0 && $0.container > 0
-                                    })
-                                    self.management.publishPorts =
-                                        try validPorts.map {
-                                            try $0.publishedPort
+                                        if trimmedName.isEmpty {
+                                            trimmedName =
+                                                VolumeStorage
+                                                .generateAnonymousVolumeName()
+                                            labels.append(
+                                                .init(
+                                                    key: VolumeConfiguration
+                                                        .anonymousLabel
+                                                )
+                                            )
                                         }
 
-                                    let validEnvironments = self.environments
-                                        .filter({
-                                            !$0.key.trimmingCharacters(
-                                                in: .whitespacesAndNewlines
-                                            ).isEmpty
-                                        })
-                                    self.process.environments =
-                                        validEnvironments.map(
-                                            \.stringRepresentation
-                                        )
+                                        volume =
+                                            try await VolumeService
+                                            .createVolume(
+                                                name: trimmedName,
+                                                labels: labels
+                                                    .dictRepresentation,
+                                                options: [:],
+                                                size: nil,
+                                                messageStreamContinuation:
+                                                    self.applicationManager
+                                                    .messageStreamContinuation
+                                            )
 
-                                    try await ContainerService.createContainer(
-                                        imageReference: trimmedReference,
-                                        arguments: [],
-                                        process: self.process,
-                                        management: self.management,
-                                        resource: self.resource,
-                                        registryScheme: self.registryScheme,
-                                        messageStreamContinuation: self
-                                            .applicationManager
-                                            .messageStreamContinuation
+                                        self.availableVolumes.append(volume)
+                                    }
+
+                                    let fs = Filesystem.volume(
+                                        name: volume.name,
+                                        format: volume.format,
+                                        source: volume.source,
+                                        destination: volumeConfig.path,
+                                        options: mountOptions
                                     )
 
-                                    self.dismiss()
-
-                                } catch (let error) {
-                                    self.errorMessage = "\(error)"
+                                    validVolumeFSs.append(fs)
                                 }
 
-                                self.showProgressView = false
+                                if !self.networks.isEmpty,
+                                    !self.networkInitialized
+                                {
+                                    self.availableNetworks =
+                                        try await NetworkService.listNetworks()
+                                    self.networkInitialized = true
+                                }
+
+                                var validNetworks: [String] = []
+
+                                for network in networks {
+                                    let trimmedName = network.name
+                                        .trimmingCharacters(
+                                            in: .whitespacesAndNewlines
+                                        )
+                                    if trimmedName.isEmpty {
+                                        continue
+                                    }
+
+                                    if validNetworks.contains(trimmedName) {
+                                        continue
+                                    }
+
+                                    if !self.availableNetworks
+                                        .contains(where: {
+                                            $0.name == trimmedName
+                                        })
+                                    {
+                                        try await NetworkService.createNetwork(
+                                            name: trimmedName,
+                                            labels: [],
+                                            options: [],
+                                            ipv4Subnet: nil,
+                                            ipv6Subnet: nil,
+                                            messageStreamContinuation: self
+                                                .applicationManager
+                                                .messageStreamContinuation
+                                        )
+                                    }
+
+                                    validNetworks.append(trimmedName)
+                                }
+
+                                self.management.volumes = validVolumeFSs
+
+                                self.management.networks = validNetworks
+
+                                let validPorts = self.ports.filter({
+                                    $0.host > 0 && $0.container > 0
+                                })
+                                self.management.publishPorts =
+                                    try validPorts.map {
+                                        try $0.publishedPort
+                                    }
+
+                                let validEnvironments = self.environments
+                                    .filter({
+                                        !$0.key.trimmingCharacters(
+                                            in: .whitespacesAndNewlines
+                                        ).isEmpty
+                                    })
+                                self.process.environments =
+                                    validEnvironments.map(
+                                        \.stringRepresentation
+                                    )
+
+                                try await ContainerService.createContainer(
+                                    imageReference: trimmedReference,
+                                    arguments: [],
+                                    process: self.process,
+                                    management: self.management,
+                                    resource: self.resource,
+                                    registryScheme: self.registryScheme,
+                                    messageStreamContinuation: self
+                                        .applicationManager
+                                        .messageStreamContinuation
+                                )
+
+                                self.dismiss()
+
+                            } catch (let error) {
+                                self.errorMessage = "\(error)"
                             }
-                        },
-                        label: {
-                            Text("Create")
-                                .padding(.horizontal, 2)
+
+                            self.showProgressView = false
                         }
+                    },
+                    label: {
+                        Text("Create")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .blue
                     )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .blue
-                        )
-                    )
-                }
-
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
+                )
             }
-            .multilineTextAlignment(.leading)
-            .padding(.all, 24)
-            .scrollTargetLayout()
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 24)
+
         }
+        .multilineTextAlignment(.leading)
+        .padding(.vertical, 24)
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .frame(width: 560)
         .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
@@ -541,7 +514,10 @@ struct CreateContainerView: View {
             }
 
             Text(
-                "⭑ If empty, the container will be attached to the default network."
+                """
+                ⭑ If empty, the container will be attached to the default network.
+                ⭑ If not found, a new network will be created.
+                """
             )
             .lineLimit(1)
             .font(.subheadline)
@@ -568,7 +544,6 @@ struct CreateContainerView: View {
             ForEach(
                 $networks,
                 content: { $network in
-
                     AddableRow(
                         content: {
                             NetworkRow(
@@ -607,8 +582,92 @@ struct CreateContainerView: View {
                     )
                 }
             )
-
         }
+    }
+
+    @ContentBuilder
+    private var mainSection: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .lastTextBaseline) {
+                        Text("Image Name")
+                        Text("Local or Remote")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 16) {
+                        TextField(
+                            text: $imageReference,
+                            prompt: Text("Ex: alpine:latest"),
+                            label: {}
+                        )
+                        .frame(maxHeight: .infinity)
+                        Button(
+                            action: {
+                                Task {
+                                    do {
+                                        self.showProgressView = true
+                                        self.localImages =
+                                            try await ImageService.listImages()
+                                        self.showProgressView = false
+                                        self.showPickLocalImage = true
+                                    } catch (let error) {
+                                        self.errorMessage = "\(error)"
+                                    }
+                                }
+                            },
+                            label: {
+                                Image(systemName: "ellipsis")
+                                    .padding(.horizontal, 2)
+                                    .frame(maxHeight: .infinity)
+                            }
+                        )
+                        .buttonStyle(
+                            CustomButtonStyle(
+                                backgroundShape: .roundedRectangle(4),
+                                backgroundColor: .secondary
+                            )
+                        )
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider()
+
+                Button(
+                    action: {
+                        showAdditionalSettings.toggle()
+                    },
+                    label: {
+                        HStack {
+                            Text("Optional Settings")
+                            Spacer()
+                            Image(
+                                systemName: showAdditionalSettings
+                                    ? "chevron.up" : "chevron.down"
+                            )
+                            .padding(.trailing, 4)
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                )
+                .buttonStyle(.plain)
+
+                if showAdditionalSettings {
+                    self.additionalSettings
+                }
+
+            }
+            .multilineTextAlignment(.leading)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 4)
+            .scrollTargetLayout()
+        }
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
     }
 }
 

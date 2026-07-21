@@ -139,7 +139,6 @@ struct VolumeListView: View {
                         CustomButtonStyle(
                             backgroundShape: .roundedRectangle(4),
                             backgroundColor: .red,
-                            disabled: !allDeletable
                         )
                     )
 
@@ -304,7 +303,6 @@ struct VolumeListView: View {
                                 CustomButtonStyle(
                                     backgroundShape: .circle,
                                     backgroundColor: .red,
-                                    disabled: volume.inUse
                                 )
                             )
                         }

@@ -28,20 +28,150 @@ struct CreateNetworkView: View {
     @SwiftUI.State private var showProgressView: Bool = false
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading) {
+                Text("Create New Network")
+                    .font(.headline)
+
+                if let errorMessage = self.errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+
+                }
+            }
+            .padding(.horizontal, 24)
+
+            self.mainSection
+
+            Divider()
+                .padding(.horizontal, 24)
+
+            HStack(spacing: 16) {
+                Button(
+                    action: {
+                        self.dismiss()
+                    },
+                    label: {
+                        Text("Cancel")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .secondary
+                    )
+                )
+
+                Button(
+                    action: {
+                        let name = self.name.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        )
+                        guard !name.isEmpty else {
+                            self.errorMessage = "Name is not specified."
+                            return
+                        }
+
+                        let ipv4SubnetString = self.ipv4Subnet
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        let ipv6SubnetString = self.ipv6Subnet
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                        let ipv4Subnet: CIDRv4?
+                        let ipv6Subnet: CIDRv6?
+                        do {
+                            ipv4Subnet =
+                                ipv4SubnetString.isEmpty
+                                ? nil : try CIDRv4(ipv4SubnetString)
+                            ipv6Subnet =
+                                ipv6SubnetString.isEmpty
+                                ? nil : try CIDRv6(ipv6SubnetString)
+                        } catch (let error) {
+                            self.errorMessage = "\(error)"
+                            return
+                        }
+
+                        Task {
+                            self.showProgressView = true
+
+                            do {
+                                let validLabels = self.labels.filter({
+                                    !$0.key.trimmingCharacters(
+                                        in: .whitespacesAndNewlines
+                                    ).isEmpty
+                                })
+                                let validOptions = self.options.filter({
+                                    !$0.key.trimmingCharacters(
+                                        in: .whitespacesAndNewlines
+                                    ).isEmpty
+                                })
+
+                                try await NetworkService.createNetwork(
+                                    name: name,
+                                    internal: self.hostOnly,
+                                    labels: validLabels,
+                                    options: validOptions,
+                                    ipv4Subnet: ipv4Subnet,
+                                    ipv6Subnet: ipv6Subnet,
+                                    messageStreamContinuation: self
+                                        .applicationManager
+                                        .messageStreamContinuation
+                                )
+
+                                self.dismiss()
+
+                            } catch (let error) {
+                                self.errorMessage = "\(error)"
+                            }
+
+                            self.showProgressView = false
+                        }
+                    },
+                    label: {
+                        Text("Create")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .blue
+                    )
+                )
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 24)
+
+        }
+        .multilineTextAlignment(.leading)
+        .padding(.vertical, 24)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        .frame(width: 560)
+        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
+        .frame(maxHeight: 440)
+        .sheet(
+            isPresented: $showProgressView,
+            content: {
+                CustomProgressView()
+                    .environment(self.applicationManager)
+            }
+        )
+        .animation(.default, value: self.labels.count)
+        .animation(.default, value: self.options.count)
+        .onDisappear {
+            self.showProgressView = false
+        }
+        .interactiveDismissDisabled()
+
+    }
+
+    @ContentBuilder
+    private var mainSection: some View {
+
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading) {
-                    Text("Create New Network")
-                        .font(.headline)
-
-                    if let errorMessage = self.errorMessage {
-                        Text(errorMessage)
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
-
-                    }
-                }
-
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Network Name")
 
@@ -115,127 +245,12 @@ struct CreateNetworkView: View {
 
                 }
 
-                Divider()
-
-                HStack(spacing: 16) {
-                    Button(
-                        action: {
-                            self.dismiss()
-                        },
-                        label: {
-                            Text("Cancel")
-                                .padding(.horizontal, 2)
-                        }
-                    )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .secondary
-                        )
-                    )
-
-                    Button(
-                        action: {
-                            let name = self.name.trimmingCharacters(
-                                in: .whitespacesAndNewlines
-                            )
-                            guard !name.isEmpty else {
-                                self.errorMessage = "Name is not specified."
-                                return
-                            }
-
-                            let ipv4SubnetString = self.ipv4Subnet
-                                .trimmingCharacters(in: .whitespacesAndNewlines)
-                            let ipv6SubnetString = self.ipv6Subnet
-                                .trimmingCharacters(in: .whitespacesAndNewlines)
-
-                            let ipv4Subnet: CIDRv4?
-                            let ipv6Subnet: CIDRv6?
-                            do {
-                                ipv4Subnet =
-                                    ipv4SubnetString.isEmpty
-                                    ? nil : try CIDRv4(ipv4SubnetString)
-                                ipv6Subnet =
-                                    ipv6SubnetString.isEmpty
-                                    ? nil : try CIDRv6(ipv6SubnetString)
-                            } catch (let error) {
-                                self.errorMessage = "\(error)"
-                                return
-                            }
-
-                            Task {
-                                self.showProgressView = true
-
-                                do {
-                                    let validLabels = self.labels.filter({
-                                        !$0.key.trimmingCharacters(
-                                            in: .whitespacesAndNewlines
-                                        ).isEmpty
-                                    })
-                                    let validOptions = self.options.filter({
-                                        !$0.key.trimmingCharacters(
-                                            in: .whitespacesAndNewlines
-                                        ).isEmpty
-                                    })
-
-                                    try await NetworkService.createNetwork(
-                                        name: name,
-                                        internal: self.hostOnly,
-                                        labels: validLabels,
-                                        options: validOptions,
-                                        ipv4Subnet: ipv4Subnet,
-                                        ipv6Subnet: ipv6Subnet,
-                                        messageStreamContinuation: self
-                                            .applicationManager
-                                            .messageStreamContinuation
-                                    )
-
-                                    self.dismiss()
-
-                                } catch (let error) {
-                                    self.errorMessage = "\(error)"
-                                }
-
-                                self.showProgressView = false
-                            }
-                        },
-                        label: {
-                            Text("Create")
-                                .padding(.horizontal, 2)
-                        }
-                    )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .blue
-                        )
-                    )
-                }
-
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
             }
             .multilineTextAlignment(.leading)
-            .padding(.all, 24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 4)
             .scrollTargetLayout()
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .frame(width: 560)
-        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
-        .frame(maxHeight: 440)
-        .sheet(
-            isPresented: $showProgressView,
-            content: {
-                CustomProgressView()
-                    .environment(self.applicationManager)
-            }
-        )
-        .animation(.default, value: self.labels.count)
-        .animation(.default, value: self.options.count)
-        .onDisappear {
-            self.showProgressView = false
-        }
-        .interactiveDismissDisabled()
-
     }
 }

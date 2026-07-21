@@ -138,7 +138,7 @@ struct InUseContainersTable: View {
                                         )
                                 },
                                 label: {
-                                    Text("Used by Compose")
+                                    Text("Compose resource")
                                 }
                             )
                             .buttonStyle(.link)

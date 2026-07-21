@@ -55,7 +55,6 @@ struct ComposeListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-
             HStack(alignment: .lastTextBaseline) {
                 HStack {
                     Text("Composes")
@@ -431,18 +430,28 @@ struct ComposeListView: View {
                     serviceName: param.serviceName,
                     containerIDs: param.containerIds,
                     downService: {
-                        try await self.handleAction(
+                        try await self.downCompose(
                             param.compose,
                             service: param.serviceName,
-                            action: .down
                         )
+                        try ComposeService.saveComposeResources([param.compose])
                     },
                     removeService: {
-                        try await self.handleAction(
+                        try await self.removeCompose(
                             param.compose,
                             service: param.serviceName,
-                            action: .remove
                         )
+                        try ComposeService.saveComposeResources([param.compose])
+
+                    },
+                    upService: { rebuild, recreate in
+                        try await self.upCompose(
+                            param.compose,
+                            service: param.serviceName,
+                            rebuild: rebuild,
+                            recreate: recreate
+                        )
+                        try ComposeService.saveComposeResources([param.compose])
                     }
                 )
             }
@@ -534,27 +543,6 @@ struct ComposeListView: View {
         )
     }
 
-    private func handleAction(
-        _ compose: ComposeResource,
-        service: String,
-        action: ComposeSubactionType
-    ) async throws {
-        switch action {
-        case .up:
-            return
-        case .build:
-            return
-        case .down:
-            try await self.downCompose(compose, service: service)
-        case .remove:
-            try await self.removeCompose(
-                compose,
-                service: service
-            )
-        }
-        try ComposeService.saveComposeResources([compose])
-    }
-
     private func downCompose(_ compose: ComposeResource, service: String)
         async throws
     {
@@ -579,7 +567,6 @@ struct ComposeListView: View {
         )
 
         compose.onDown(downedServices: removedServices)
-        return
     }
 
     private func removeCompose(_ compose: ComposeResource, service: String)
@@ -605,8 +592,41 @@ struct ComposeListView: View {
                 .messageStreamContinuation
         )
         compose.onRemove(removedServices: removedServices)
-        return
     }
+
+    private func upCompose(
+        _ compose: ComposeResource,
+        service: String,
+        rebuild: Bool,
+        recreate: Bool
+    ) async throws {
+        let startedContainers = try await ComposeService.upCompose(
+            compose.baseCompose,
+            additionalComposes: compose.additionalComposes,
+            // envs for parsing vars in the compose files
+            envFiles: compose.envFiles,
+            projectDirectory: compose.projectDirectory,
+            nameOverride: compose.nameOverride,
+            // Services to build (builds all if omitted)
+            // Explicitly targeting a service by name is an absolute override.
+            // and always bypasses profile restrictions
+            requestedServices: [service],
+            // Specify a profile to enable. Can be repeated.
+            // Services without a 'profiles' key are always enabled;
+            // profiled services are enabled only when one of their profiles is active.
+            requestedProfiles: [],
+            // only effect image
+            forceRebuild: rebuild,
+            // effect volume and network
+            forceRecreate: recreate,
+            messageStreamContinuation: applicationManager
+                .messageStreamContinuation
+        )
+        compose.onUp(
+            newContainers: startedContainers.mapValues({ $0.map(\.id) })
+        )
+    }
+
 }
 
 private struct ServiceContainersView: View {
@@ -620,6 +640,7 @@ private struct ServiceContainersView: View {
 
     var downService: () async throws -> Void
     var removeService: () async throws -> Void
+    var upService: (_ rebuild: Bool, _ recreate: Bool) async throws -> Void
 
     @State private var showProgressView: Bool = false
     @State private var errorMessage: String?
@@ -649,83 +670,101 @@ private struct ServiceContainersView: View {
                 errorMessage: $errorMessage
             )
 
-            HStack(spacing: 16) {
-                Button(
-                    action: {
-                        self.dismiss()
-                    },
-                    label: {
-                        Text("Cancel")
-                            .padding(.horizontal, 2)
-                    }
-                )
-                .buttonStyle(
-                    CustomButtonStyle(
-                        backgroundShape: .roundedRectangle(4),
-                        backgroundColor: .secondary
-                    )
-                )
+            VStack(alignment: .trailing, spacing: 12) {
 
-                Button(
-                    action: {
-                        Task {
-                            self.showProgressView = true
-                            self.errorMessage = nil
-                            defer {
-                                self.showProgressView = false
-                            }
-                            do {
-                                try await self.downService()
-                                self.dismiss()
-                            } catch {
-                                self.errorMessage = error.localizedDescription
-                            }
+                HStack(spacing: 16) {
+                    Button(
+                        action: {
+                            self.dismiss()
+                        },
+                        label: {
+                            Text("Cancel")
+                                .padding(.horizontal, 2)
                         }
-                    },
-                    label: {
-                        Text("\(ComposeSubactionType.down.actionTitle) Service")
-                            .padding(.horizontal, 2)
-                    }
-                )
-                .buttonStyle(
-                    CustomButtonStyle(
-                        backgroundShape: .roundedRectangle(4),
-                        backgroundColor: .blue
                     )
-                )
-
-                Button(
-                    action: {
-                        Task {
-                            self.showProgressView = true
-                            self.errorMessage = nil
-                            defer {
-                                self.showProgressView = false
-                            }
-                            do {
-                                try await self.removeService()
-                                self.dismiss()
-                            } catch {
-                                self.errorMessage = error.localizedDescription
-                            }
-                        }
-                    },
-                    label: {
-                        Text(
-                            "\(ComposeSubactionType.remove.actionTitle) Service"
+                    .buttonStyle(
+                        CustomButtonStyle(
+                            backgroundShape: .roundedRectangle(4),
+                            backgroundColor: .secondary
                         )
-                        .padding(.horizontal, 2)
-                    }
-                )
-                .buttonStyle(
-                    CustomButtonStyle(
-                        backgroundShape: .roundedRectangle(4),
-                        backgroundColor: .blue
                     )
-                )
-            }
 
-            .frame(maxWidth: .infinity, alignment: .trailing)
+                    Menu(
+                        content: {
+                            Button(
+                                "Down & Remove",
+                                action: { performAction(self.removeService) }
+                            )
+                        },
+                        label: {
+                            Text("Down")
+                                .padding(.horizontal, 2)
+                        },
+                        primaryAction: {
+                            performAction(self.downService)
+                        }
+                    )
+                    .menuActionDismissBehavior(.automatic)
+                    .buttonStyle(
+                        CustomButtonStyle(
+                            backgroundShape: .roundedRectangle(4),
+                            backgroundColor: .blue
+                        )
+                    )
+
+                    Menu(
+                        content: {
+                            Button(
+                                "With rebuild",
+                                action: {
+                                    performAction {
+                                        try await self.upService(true, false)
+                                    }
+                                }
+                            )
+                            Button(
+                                "With recreate",
+                                action: {
+                                    performAction {
+                                        try await self.upService(false, true)
+                                    }
+                                }
+                            )
+                            Button(
+                                "Rebuild & recreate",
+                                action: {
+                                    performAction {
+                                        try await self.upService(true, true)
+                                    }
+                                }
+                            )
+                        },
+                        label: {
+                            Text("Re-up")
+                                .padding(.horizontal, 2)
+                        },
+                        primaryAction: {
+                            performAction {
+                                try await self.upService(false, false)
+                            }
+                        }
+                    )
+                    .menuActionDismissBehavior(.automatic)
+                    .buttonStyle(
+                        CustomButtonStyle(
+                            backgroundShape: .roundedRectangle(4),
+                            backgroundColor: .blue
+                        )
+                    )
+
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+
+                Text("Long press for more options.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+            }
 
         }
         .padding(.all, 24)
@@ -743,6 +782,22 @@ private struct ServiceContainersView: View {
         }
         .task {
             await listContainers()
+        }
+    }
+
+    private func performAction(_ action: @escaping () async throws -> Void) {
+        Task {
+            self.showProgressView = true
+            self.errorMessage = nil
+            defer {
+                self.showProgressView = false
+            }
+            do {
+                try await action()
+                self.dismiss()
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
         }
     }
 

@@ -175,7 +175,6 @@ struct ImageListView: View {
                             CustomButtonStyle(
                                 backgroundShape: .roundedRectangle(4),
                                 backgroundColor: .red,
-                                disabled: !allDeletable
                             )
                         )
 
@@ -344,7 +343,6 @@ struct ImageListView: View {
                                 CustomButtonStyle(
                                     backgroundShape: .circle,
                                     backgroundColor: .red,
-                                    disabled: image.inUse
                                 )
                             )
 

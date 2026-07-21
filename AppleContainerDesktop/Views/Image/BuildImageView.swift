@@ -40,20 +40,158 @@ struct BuildImageView: View {
     // cacheIn: [String] = [],
     // cacheOut: [String] = [],
     var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Build Image From Dockerfile")
+                    .font(.headline)
+
+                if let errorMessage = self.errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+
+                }
+            }
+            .padding(.horizontal, 24)
+
+            self.mainSection
+
+            Divider()
+                .padding(.horizontal, 24)
+
+            HStack(spacing: 16) {
+                Button(
+                    action: {
+                        self.dismiss()
+                    },
+                    label: {
+                        Text("Cancel")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .secondary
+                    )
+                )
+
+                Button(
+                    action: {
+                        guard let contextDirectory else {
+                            self.errorMessage =
+                                "ContextDirectory is required."
+                            return
+                        }
+
+                        guard let dockerFile else {
+                            self.errorMessage = "Dockerfile is required."
+                            return
+                        }
+                        Task {
+                            self.showProgressView = true
+
+                            do {
+                                let platformStringArray: [String] = self
+                                    .platformString.split(separator: ",")
+                                    .map({
+                                        $0.trimmingCharacters(
+                                            in: .whitespacesAndNewlines
+                                        )
+                                    })
+                                var platforms: Set<Platform> = Set(
+                                    try platformStringArray.map({
+                                        try Platform(from: $0)
+                                    })
+                                )
+                                if platforms.isEmpty {
+                                    platforms.insert(Platform.current)
+                                }
+
+                                let validBuildArguments = self
+                                    .buildArguments.filter({
+                                        !$0.key.trimmingCharacters(
+                                            in: .whitespacesAndNewlines
+                                        ).isEmpty
+                                    })
+
+                                try await ImageService.buildImage(
+                                    dockerFile: dockerFile,
+                                    contextDirectory: contextDirectory,
+                                    tag: self.tag,
+                                    cpus: 2,
+                                    memory: 1024.mib(),
+                                    vSockPort: 8088,
+                                    outputs: [
+                                        .init(
+                                            type: .oci,
+                                            additionalFields: []
+                                        )
+                                    ],
+                                    platforms: platforms,
+                                    // build time variable
+                                    buildArguments: validBuildArguments
+                                        .stringArray,
+                                    labels: [],
+                                    noCache: false,
+                                    targetStage: self.targetStage,
+                                    cacheIn: [],
+                                    cacheOut: [],
+                                    messageStreamContinuation: self
+                                        .applicationManager
+                                        .messageStreamContinuation
+                                )
+
+                                self.dismiss()
+
+                            } catch (let error) {
+                                self.errorMessage = "\(error)"
+                            }
+
+                            self.showProgressView = false
+                        }
+                    },
+                    label: {
+                        Text("Build")
+                            .padding(.horizontal, 2)
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .roundedRectangle(4),
+                        backgroundColor: .blue
+                    )
+                )
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 24)
+
+        }
+        .multilineTextAlignment(.leading)
+        .padding(.vertical, 24)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        .frame(width: 560)
+        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
+        .frame(maxHeight: 440)
+        .sheet(
+            isPresented: $showProgressView,
+            content: {
+                CustomProgressView()
+                    .environment(self.applicationManager)
+            }
+        )
+        .animation(.default, value: self.buildArguments.count)
+        .onDisappear {
+            self.showProgressView = false
+        }
+        .interactiveDismissDisabled()
+    }
+
+    @ContentBuilder
+    private var mainSection: some View {
+
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Build Image From Dockerfile")
-                        .font(.headline)
-
-                    if let errorMessage = self.errorMessage {
-                        Text(errorMessage)
-                            .font(.subheadline)
-                            .foregroundStyle(.red)
-
-                    }
-                }
-
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Context Directory")
                     FileSelectView(
@@ -230,136 +368,13 @@ struct BuildImageView: View {
 
                 }
 
-                Divider()
-
-                HStack(spacing: 16) {
-                    Button(
-                        action: {
-                            self.dismiss()
-                        },
-                        label: {
-                            Text("Cancel")
-                                .padding(.horizontal, 2)
-                        }
-                    )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .secondary
-                        )
-                    )
-
-                    Button(
-                        action: {
-                            guard let contextDirectory else {
-                                self.errorMessage =
-                                    "ContextDirectory is required."
-                                return
-                            }
-
-                            guard let dockerFile else {
-                                self.errorMessage = "Dockerfile is required."
-                                return
-                            }
-                            Task {
-                                self.showProgressView = true
-
-                                do {
-                                    let platformStringArray: [String] = self
-                                        .platformString.split(separator: ",")
-                                        .map({
-                                            $0.trimmingCharacters(
-                                                in: .whitespacesAndNewlines
-                                            )
-                                        })
-                                    var platforms: Set<Platform> = Set(
-                                        try platformStringArray.map({
-                                            try Platform(from: $0)
-                                        })
-                                    )
-                                    if platforms.isEmpty {
-                                        platforms.insert(Platform.current)
-                                    }
-
-                                    let validBuildArguments = self
-                                        .buildArguments.filter({
-                                            !$0.key.trimmingCharacters(
-                                                in: .whitespacesAndNewlines
-                                            ).isEmpty
-                                        })
-
-                                    try await ImageService.buildImage(
-                                        dockerFile: dockerFile,
-                                        contextDirectory: contextDirectory,
-                                        tag: self.tag,
-                                        cpus: 2,
-                                        memory: 1024.mib(),
-                                        vSockPort: 8088,
-                                        outputs: [
-                                            .init(
-                                                type: .oci,
-                                                additionalFields: []
-                                            )
-                                        ],
-                                        platforms: platforms,
-                                        // build time variable
-                                        buildArguments: validBuildArguments
-                                            .stringArray,
-                                        labels: [],
-                                        noCache: false,
-                                        targetStage: self.targetStage,
-                                        cacheIn: [],
-                                        cacheOut: [],
-                                        messageStreamContinuation: self
-                                            .applicationManager
-                                            .messageStreamContinuation
-                                    )
-
-                                    self.dismiss()
-
-                                } catch (let error) {
-                                    self.errorMessage = "\(error)"
-                                }
-
-                                self.showProgressView = false
-                            }
-                        },
-                        label: {
-                            Text("Build")
-                                .padding(.horizontal, 2)
-                        }
-                    )
-                    .buttonStyle(
-                        CustomButtonStyle(
-                            backgroundShape: .roundedRectangle(4),
-                            backgroundColor: .blue
-                        )
-                    )
-                }
-
-                .frame(maxWidth: .infinity, alignment: .trailing)
-
             }
             .multilineTextAlignment(.leading)
-            .padding(.all, 24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 4)
             .scrollTargetLayout()
         }
         .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        .frame(width: 560)
-        .fixedSize(horizontal: false, vertical: !self.showAdditionalSettings)
-        .frame(maxHeight: 440)
-        .sheet(
-            isPresented: $showProgressView,
-            content: {
-                CustomProgressView()
-                    .environment(self.applicationManager)
-            }
-        )
-        .animation(.default, value: self.buildArguments.count)
-        .onDisappear {
-            self.showProgressView = false
-        }
-        .interactiveDismissDisabled()
-
     }
+
 }

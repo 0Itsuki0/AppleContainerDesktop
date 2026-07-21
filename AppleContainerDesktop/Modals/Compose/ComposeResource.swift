@@ -103,6 +103,12 @@ nonisolated
     var runningContainers: [String: [ContainerSnapshotID]]
     var stoppedContainers: [String: [ContainerSnapshotID]]
 
+    var startedContainers: [String: [ContainerSnapshotID]] {
+        runningContainers.merging(stoppedContainers) { first, second in
+            first + second
+        }
+    }
+
     init(
         baseCompose: URL,
         projectDirectory: URL?,
@@ -141,9 +147,6 @@ nonisolated
                 .isEmpty == true
             ? nil
             : nameOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        self.runningContainers = [:]
-        self.stoppedContainers = [:]
         self.parseCompose()
     }
 

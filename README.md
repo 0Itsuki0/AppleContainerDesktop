@@ -11,8 +11,31 @@ a tool that we can use to create and run Linux containers as lightweight virtual
 ## Perquisite
 This app will not automatically download `container` so please make sure to install it either from the [GitHub](https://github.com/apple/container) or by running `brew install --cask container`.
 
-## Installation
+## Installation (Main GUI App)
 You can either download the entire repository and run/build it with Xcode or you can download the latest signed `dmg` for the app from the [GitHub release page](https://github.com/0Itsuki0/AppleContainerDesktop/releases).
+
+
+## (Optional) Installation (CLI)
+
+CLI is a helper tool for compose-related operations. Please refer to the [Compose section](#todo) for more details.
+
+1. Open `AppleContainerDesktop_<version>.dmg`.
+2. In the mounted volume, run the installer from Terminal:
+
+```bash
+sh /Volumes/AppleContainerDesktop/install.sh
+```
+This will copy `container-desktop`(CLI) to `/usr/local/bin`.
+
+3. Verify:
+```bash
+container-desktop --help
+```
+
+**To uninstall:**
+```bash
+sudo rm /usr/local/bin/container-desktop
+```
 
 
 ## Basic Usage

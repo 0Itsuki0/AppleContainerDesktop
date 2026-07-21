@@ -139,7 +139,6 @@ struct NetworkListView: View {
                         CustomButtonStyle(
                             backgroundShape: .roundedRectangle(4),
                             backgroundColor: .red,
-                            disabled: !allDeletable
                         )
                     )
 
@@ -293,7 +292,6 @@ struct NetworkListView: View {
                                 CustomButtonStyle(
                                     backgroundShape: .circle,
                                     backgroundColor: .red,
-                                    disabled: deleteDisabled
                                 )
                             )
                         }

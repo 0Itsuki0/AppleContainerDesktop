@@ -299,149 +299,28 @@ struct ContainerListView: View {
 
                     TableColumn(TableHelper.columnHeader("Actions")) {
                         container in
-
-                        HStack(spacing: 12) {
-                            switch container.status {
-                            case .running:
-                                Button(
-                                    action: {
-                                        Task {
-                                            self.applicationManager
-                                                .showProgressView = true
-
-                                            do {
-                                                try await ContainerService
-                                                    .stopContainers(
-                                                        [
-                                                            container.container
-                                                                .id
-                                                        ],
-                                                        stopTimeoutSeconds:
-                                                            userSettingsManager
-                                                            .stopContainerTimeoutSeconds,
-                                                        messageStreamContinuation:
-                                                            applicationManager
-                                                            .messageStreamContinuation
-                                                    )
-                                                await self.listContainers()
-                                                self.applicationManager
-                                                    .showProgressView = false
-                                            } catch (let error) {
-                                                applicationManager.error = error
-                                            }
-                                        }
-                                    },
-                                    label: {
-                                        TableHelper.actionImage(
-                                            systemName: "stop.fill"
-                                        )
-                                    }
-                                )
-                                .buttonStyle(
-                                    CustomButtonStyle(
-                                        backgroundShape: .circle,
-                                        backgroundColor: .gray
-                                    )
-                                )
-
-                            case .stopped:
-                                Button(
-                                    action: {
-                                        Task {
-                                            self.applicationManager
-                                                .showProgressView = true
-
-                                            do {
-                                                try await ContainerService
-                                                    .startContainer(
-                                                        container.container,
-                                                        attachContainerStdout:
-                                                            false,
-                                                        attachContainerStdIn:
-                                                            false,
-                                                        messageStreamContinuation:
-                                                            applicationManager
-                                                            .messageStreamContinuation
-                                                    )
-                                                await self.listContainers()
-                                                self.applicationManager
-                                                    .showProgressView = false
-
-                                            } catch (let error) {
-                                                applicationManager.error = error
-                                            }
-                                        }
-                                    },
-                                    label: {
-                                        TableHelper.actionImage(
-                                            systemName: "play.fill"
-                                        )
-                                    }
-                                )
-                                .buttonStyle(
-                                    CustomButtonStyle(
-                                        backgroundShape: .circle,
-                                        backgroundColor: .blue
-                                    )
-                                )
-
-                            case .stopping:
-                                Image(systemName: "slash.circle")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 16)
-                                    .foregroundStyle(.secondary)
-
-                            case .unknown:
-                                Image(systemName: "slash.circle")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 16)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Divider()
-                                .padding(.vertical, 12)
-
+                        let compose = ComposeService.runningByCompose(
+                            containerName: container.name
+                        )
+                        if let compose {
                             Button(
                                 action: {
-                                    Task {
-                                        self.applicationManager
-                                            .showProgressView = true
-
-                                        do {
-                                            try await ContainerService
-                                                .deleteContainers(
-                                                    [container.container],
-                                                    force: true,
-                                                    messageStreamContinuation:
-                                                        applicationManager
-                                                        .messageStreamContinuation
-                                                )
-                                            await self.listContainers()
-                                            self.applicationManager
-                                                .showProgressView = false
-                                        } catch (let error) {
-                                            applicationManager.error = error
-                                        }
-                                    }
+                                    applicationManager.pendingComposeAction =
+                                        .init(
+                                            compose: compose,
+                                            actionCategory: .inspect
+                                        )
                                 },
                                 label: {
-                                    TableHelper.actionImage(
-                                        systemName: "trash.fill"
-                                    )
+                                    Text("Compose resource")
                                 }
                             )
-                            .buttonStyle(
-                                CustomButtonStyle(
-                                    backgroundShape: .circle,
-                                    backgroundColor: .red
-                                )
-                            )
-
+                            .buttonStyle(.link)
+                        } else {
+                            self.actionView(container)
+                                .disabled(compose != nil)
+                                .opacity(compose != nil ? 0.5 : 1.0)
                         }
-                        .padding(.horizontal, 8)
-
                     }
                     .width(92)
 
@@ -523,5 +402,152 @@ struct ContainerListView: View {
         } catch (let error) {
             applicationManager.error = error
         }
+    }
+
+    @ContentBuilder
+    private func actionView(_ container: ContainerDisplayModel) -> some View {
+
+        HStack(spacing: 12) {
+            switch container.status {
+            case .running:
+                Button(
+                    action: {
+                        Task {
+                            self.applicationManager
+                                .showProgressView = true
+
+                            do {
+                                try await ContainerService
+                                    .stopContainers(
+                                        [
+                                            container.container
+                                                .id
+                                        ],
+                                        stopTimeoutSeconds:
+                                            userSettingsManager
+                                            .stopContainerTimeoutSeconds,
+                                        messageStreamContinuation:
+                                            applicationManager
+                                            .messageStreamContinuation
+                                    )
+                                await self.listContainers()
+                                self.applicationManager
+                                    .showProgressView = false
+                            } catch (let error) {
+                                applicationManager.error = error
+                            }
+                        }
+                    },
+                    label: {
+                        TableHelper.actionImage(
+                            systemName: "stop.fill"
+                        )
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .circle,
+                        backgroundColor: .gray
+                    )
+                )
+
+            case .stopped:
+                Button(
+                    action: {
+                        Task {
+                            self.applicationManager
+                                .showProgressView = true
+
+                            do {
+                                try await ContainerService
+                                    .startContainer(
+                                        container.container,
+                                        attachContainerStdout:
+                                            false,
+                                        attachContainerStdIn:
+                                            false,
+                                        messageStreamContinuation:
+                                            applicationManager
+                                            .messageStreamContinuation
+                                    )
+                                await self.listContainers()
+                                self.applicationManager
+                                    .showProgressView = false
+
+                            } catch (let error) {
+                                applicationManager.error = error
+                            }
+                        }
+                    },
+                    label: {
+                        TableHelper.actionImage(
+                            systemName: "play.fill"
+                        )
+                    }
+                )
+                .buttonStyle(
+                    CustomButtonStyle(
+                        backgroundShape: .circle,
+                        backgroundColor: .blue
+                    )
+                )
+
+            case .stopping:
+                Image(systemName: "slash.circle")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16)
+                    .foregroundStyle(.secondary)
+
+            case .unknown:
+                Image(systemName: "slash.circle")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+                .padding(.vertical, 12)
+
+            Button(
+                action: {
+                    Task {
+                        self.applicationManager
+                            .showProgressView = true
+
+                        do {
+                            try await ContainerService
+                                .deleteContainers(
+                                    [container.container],
+                                    force: true,
+                                    messageStreamContinuation:
+                                        applicationManager
+                                        .messageStreamContinuation
+                                )
+                            await self.listContainers()
+                            self.applicationManager
+                                .showProgressView = false
+                        } catch (let error) {
+                            applicationManager.error = error
+                        }
+                    }
+                },
+                label: {
+                    TableHelper.actionImage(
+                        systemName: "trash.fill"
+                    )
+                }
+            )
+            .buttonStyle(
+                CustomButtonStyle(
+                    backgroundShape: .circle,
+                    backgroundColor: .red
+                )
+            )
+
+        }
+        .padding(.horizontal, 8)
+
     }
 }

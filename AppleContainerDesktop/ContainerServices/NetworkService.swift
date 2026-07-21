@@ -49,8 +49,10 @@ enum NetworkService {
         options: [String: String],
         plugin: String = "container-network-vmnet",
         // IPv4 subnet for a network (CIDR format, e.g., 192.168.100.0/24)
+        // if not specified, a random one will be assigned
         ipv4Subnet: CIDRv4?,
         // Set the IPv6 prefix for a network (CIDR format, e.g., fd00:1234::/64)
+        // if not specified, a random one will be assigned
         ipv6Subnet: CIDRv6?,
         messageStreamContinuation: AsyncStream<String>.Continuation?
     ) async throws -> NetworkResource {
