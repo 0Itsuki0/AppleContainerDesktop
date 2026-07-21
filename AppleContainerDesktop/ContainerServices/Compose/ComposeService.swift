@@ -15,14 +15,13 @@ import DockerComposeParser
 import Foundation
 
 // MARK: - Known limitations
-// 1. explicit ipV4 and ipV6 has to be set (as of current implementation of Container)
+// 1. Disable ipV4 and ipV6 not supported (as of current implementation of Container)
 // 2. Remote OCI not supported (as of current implementation of DockerComposeParser)
 // 3. build.network not supported when building an image from dockerfile (as of current implementation of Container)
-// 4. service.develop, configs, hooks not supported
+// 4. service.develop, configs, hooks, volumes_from not supported
 // 6. network alias not supported  (as of current implementation of Container)
-// 7. Volumes_from currently not supported
-// 8. replica not supported for named volumes (as of current implementation of Container)
-// 9. auto recreate on images/volumes/networks when configuration changed
+// 7. replica not supported for named volumes (as of current implementation of Container)
+// 8. auto recreate on images/volumes/networks when configuration changed
 
 enum ComposeService {
     private static let userDefaults = UserDefaults.standard

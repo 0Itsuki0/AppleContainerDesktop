@@ -409,12 +409,16 @@ struct ComposeListView: View {
             else {
                 return
             }
-
+            self.searchText = action.compose.name
             switch action.actionCategory {
             case .up, .down:
-                self.showComposeActionView = action
+                self.showComposeActionView = nil
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(10))
+                    self.showComposeActionView = action
+                }
             case .inspect:
-                self.searchText = action.compose.name
+                break
             }
 
             self.applicationManager.pendingComposeAction = nil
